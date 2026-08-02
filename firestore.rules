@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Deploy with: firebase deploy --only firestore:rules
+// (requires a firebase.json pointing at this file — see README.md).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Every student's own data: profile + all per-user subcollections
+    // (attempts, questionProgress, dictionaryProgress, bookmarks, notes,
+    // syllabusProgress, timetable, goals, streak, homeButtons, ...).
+    // Only that student's own signed-in uid may read or write it.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Shared content (question bank, mock tests, syllabus, dictionary,
+    // videos, app config): any signed-in student can read; writes only
+    // happen server-side (Admin SDK / Cloud Functions / internal admin
+    // tool), never from the student app.
+    match /questions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /mockTests/{testId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /syllabusTopics/{topicId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /dictionaryWords/{wordId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /videos/{videoId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /appConfig/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
