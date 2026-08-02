@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -10,9 +9,12 @@ import 'app_colors.dart';
 /// Devanagari coverage — a Latin-only font would silently fall back to a
 /// generic system font the moment Hindi text appears, which would look
 /// inconsistent right where it matters most (question text, syllabus
-/// names). Field/button/list layout follows the reference Edit Profile
-/// screen: boxed inputs with a light border, a single navy accent for
-/// every link/button/icon, flat (no-shadow) app bars.
+/// names). The font ships as a bundled asset (see pubspec.yaml) rather
+/// than through `google_fonts`' runtime fetching, so the app never depends
+/// on reaching fonts.gstatic.com on a student's first launch. Field/
+/// button/list layout follows the reference Edit Profile screen: boxed
+/// inputs with a light border, a single navy accent for every link/
+/// button/icon, flat (no-shadow) app bars.
 class AppTheme {
   static const _radius = 12.0;
 
@@ -42,9 +44,9 @@ class AppTheme {
       surface: surface,
     );
 
-    final baseTextTheme = GoogleFonts.notoSansTextTheme(
-      isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-    );
+    final baseTextTheme =
+        (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
+            .apply(fontFamily: 'Noto Sans');
     final textTheme = baseTextTheme
         .apply(bodyColor: textPrimary, displayColor: textPrimary)
         .copyWith(

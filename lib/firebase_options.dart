@@ -17,9 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web — run `flutterfire configure`.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -48,5 +46,19 @@ class DefaultFirebaseOptions {
     projectId: 'REPLACE_ME',
     storageBucket: 'REPLACE_ME.firebasestorage.app',
     iosBundleId: 'com.adnankhanaligyt.ctetTetPrep',
+  );
+
+  // Web wasn't part of the original plan (Android first), but is kept
+  // buildable so the app can still be previewed in a browser (e.g. for a
+  // design review) before a real Firebase project exists. `flutterfire
+  // configure` will overwrite this with real values if web is ever
+  // actually shipped.
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'REPLACE_ME',
+    appId: 'REPLACE_ME',
+    messagingSenderId: 'REPLACE_ME',
+    projectId: 'REPLACE_ME',
+    storageBucket: 'REPLACE_ME.firebasestorage.app',
+    authDomain: 'REPLACE_ME.firebaseapp.com',
   );
 }
