@@ -7,11 +7,11 @@ architecture/decisions are written up in the project plan this was built
 from (Firebase Auth with Email + Mobile OTP, Firestore data model,
 feature-first Flutter structure).
 
-Progress so far: **Phase 1** (Firebase Auth foundation, Edit Profile) and
-the start of **Phase 2** (Mock Test + Syllabus Tracker, the app's core
-day-to-day study loop) are built. Timetable, dictionary, notepad,
-history, video player, and push notifications are later phases — see the
-plan for the full order.
+Progress so far: **Phase 1** (Firebase Auth foundation, Edit Profile),
+**Phase 2** (Mock Test + Syllabus Tracker), and **Phase 3** (Dictionary,
+Timetable, Notepad) are built. History, video player, and push
+notifications are the remaining later phases — see the plan for the full
+order.
 
 ## One-time setup (you need to do this — I don't have access to your
 ## Google/Firebase account)
@@ -47,9 +47,11 @@ plan for the full order.
    (requires `firebase login` and a `firebase.json` — running
    `firebase init firestore` in this folder once will create that file and
    point it at `firestore.rules`.)
-7. **Seed some content to test with** — Mock Test and Syllabus are both
-   empty until you add documents to Firestore yourself (Firebase Console →
-   Firestore Database → Start collection):
+7. **Seed some content to test with** — Mock Test, Syllabus, and
+   Dictionary are all empty until you add documents to Firestore yourself
+   (Firebase Console → Firestore Database → Start collection). Timetable
+   and Notepad don't need seeding — students create that content
+   themselves in the app.
    - `questions/{autoId}`: `subject`, `topic`, `examTags` (array, e.g.
      `["CTET Paper 1"]`), `text`, `options` (array of strings),
      `correctOptionIndex` (number), `explanations` (array, one string per
@@ -57,6 +59,8 @@ plan for the full order.
    - `syllabusTopics/{autoId}`: `exam` (must match one of the strings in
      `lib/core/models/exam_catalog.dart`), `subject`, `unit`, `topicName`,
      `order` (number, controls display order)
+   - `dictionaryWords/{autoId}`: `word`, `meaningHi`, `meaningEn`,
+     `exampleSentence` (all strings)
 
 ## Ads (AdMob)
 
@@ -89,9 +93,9 @@ flutter test
 ```
 
 Covers `NameSuggestionService` (email → suggested display name) and
-`SpacedRepetitionService` (the mock-test due-date scheduling) end to
-end — the two pieces of pure logic in the app so far, and the easiest to
-silently break.
+`SpacedRepetitionService` (the due-today review scheduling shared by
+Mock Test and Dictionary) end to end — the two pieces of pure logic in
+the app so far, and the easiest to silently break.
 
 ## What's here
 
@@ -102,24 +106,31 @@ silently break.
   later edits share the same screen).
 - `lib/features/mock_test/` — today's due questions in mixed order,
   instant feedback + explanation, locked answers, Submit-anytime/Next —
-  matches `take_test.php` from the reference PHP app. Scheduling logic in
-  `domain/spaced_repetition_service.dart`.
+  matches `take_test.php` from the reference PHP app.
 - `lib/features/syllabus/` — topic list grouped by subject with a
   three-state tap-to-cycle (not started → in progress → done) and an
   overall progress bar.
-- `lib/features/dashboard/` — Home screen with quick links to Mock Test
-  and Syllabus, a banner ad, and the routing gate that forces an
+- `lib/features/dictionary/` — same due-today review loop as Mock Test,
+  flashcard-style (word → tap to reveal meaning/example → Know It /
+  Don't Know), plus a browsable list of every word.
+- `lib/features/timetable/` — personal weekly study schedule: add a
+  block (day, start/end time, subject), tick it off, delete it.
+- `lib/features/notepad/` — simple notes with an optional pin-to-top.
+- `lib/features/dashboard/` — Home screen with quick links to all five
+  study tools, a banner ad, and the routing gate that forces an
   incomplete profile into setup before showing it.
 - `lib/core/` — theme (navy brand, bundled Noto Sans, **follows the
   phone's system light/dark setting by default** — see
   `AppThemePreference` in `core/models/user_profile.dart`), routing
-  (go_router + auth-state redirect), `NameSuggestionService`, `AdService`.
+  (go_router + auth-state redirect), `NameSuggestionService`,
+  `SpacedRepetitionService` (shared by Mock Test + Dictionary), `AdService`.
 - `firestore.rules` — per-user data isolation + read-only shared content
   collections.
 
 ## What's NOT here yet
 
-Timetable, dictionary, notepad, history, video player, and push
-notifications are later phases. The root-level PHP file-manager tool from
-the rest of the original Study-App repo was never brought over here — it's
-a private dev tool, not something students should ever see.
+History (detailed past-attempts view), video player, and push
+notifications are the remaining later phases. The root-level PHP
+file-manager tool from the rest of the original Study-App repo was never
+brought over here — it's a private dev tool, not something students
+should ever see.

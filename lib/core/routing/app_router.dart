@@ -9,9 +9,12 @@ import '../../features/auth/presentation/screens/phone_auth_screen.dart';
 import '../../features/auth/presentation/screens/suggested_name_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
+import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
 import '../../features/mock_test/presentation/screens/take_test_screen.dart';
+import '../../features/notepad/presentation/screens/notepad_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/syllabus/presentation/screens/syllabus_screen.dart';
+import '../../features/timetable/presentation/screens/timetable_screen.dart';
 import 'go_router_refresh_stream.dart';
 
 // Only '/welcome' is bounced away from once logged in — this exists purely
@@ -25,7 +28,15 @@ const _bounceWhenLoggedIn = ['/welcome'];
 
 // Routes that require a signed-in user; anyone signed out gets sent back
 // to Welcome instead.
-const _requiresAuth = ['/', '/profile/edit', '/mock-test/take', '/syllabus'];
+const _requiresAuth = [
+  '/',
+  '/profile/edit',
+  '/mock-test/take',
+  '/syllabus',
+  '/dictionary',
+  '/timetable',
+  '/notepad',
+];
 
 final appRouter = GoRouter(
   initialLocation: '/welcome',
@@ -86,6 +97,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/syllabus',
       builder: (context, state) => const SyllabusScreen(),
+    ),
+    GoRoute(
+      path: '/dictionary',
+      builder: (context, state) => const DictionaryScreen(),
+    ),
+    GoRoute(
+      path: '/timetable',
+      builder: (context, state) => const TimetableScreen(),
+    ),
+    GoRoute(
+      path: '/notepad',
+      builder: (context, state) => const NotepadScreen(),
     ),
   ],
 );

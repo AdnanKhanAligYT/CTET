@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/question.dart';
+import '../../../../core/models/review_progress.dart';
+import '../../../../core/services/spaced_repetition_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
-import '../../domain/question_progress.dart';
-import '../../domain/spaced_repetition_service.dart';
 import 'test_result_screen.dart';
 
 /// Mirrors `take_test.php` from the reference app: always just today's due
@@ -32,7 +32,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
   bool _loading = true;
   String? _errorMessage;
   List<Question> _dueQuestions = const [];
-  Map<String, QuestionProgress> _progress = const {};
+  Map<String, ReviewProgress> _progress = const {};
 
   int _currentIndex = 0;
   int? _selectedOption;
@@ -101,7 +101,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     });
 
     final updatedProgress = _spacedRepetition.recordAnswer(
-      questionId: question.id,
+      itemId: question.id,
       current: _progress[question.id],
       wasCorrect: wasCorrect,
     );

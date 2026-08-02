@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/models/question.dart';
-import '../domain/question_progress.dart';
+import '../../../core/models/review_progress.dart';
 
 /// Firestore access for the mock-test feature. Kept as one small
 /// repository (rather than spreading raw Firestore calls through the
@@ -32,7 +32,7 @@ class MockTestRepository {
         .toList();
   }
 
-  Future<Map<String, QuestionProgress>> fetchProgress(String uid) async {
+  Future<Map<String, ReviewProgress>> fetchProgress(String uid) async {
     final snapshot = await _firestore
         .collection('users')
         .doc(uid)
@@ -40,16 +40,16 @@ class MockTestRepository {
         .get();
     return {
       for (final doc in snapshot.docs)
-        doc.id: QuestionProgress.fromMap(doc.id, doc.data()),
+        doc.id: ReviewProgress.fromMap(doc.id, doc.data()),
     };
   }
 
-  Future<void> saveProgress(String uid, QuestionProgress progress) {
+  Future<void> saveProgress(String uid, ReviewProgress progress) {
     return _firestore
         .collection('users')
         .doc(uid)
         .collection('questionProgress')
-        .doc(progress.questionId)
+        .doc(progress.itemId)
         .set(progress.toMap());
   }
 
