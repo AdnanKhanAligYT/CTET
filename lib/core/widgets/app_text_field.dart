@@ -38,9 +38,11 @@ class AppTextField extends StatelessWidget {
       validator: validator,
       maxLines: obscureText ? 1 : maxLines,
       decoration: InputDecoration(
+        // Border/fill/label colors all come from the app-wide
+        // InputDecorationTheme (see core/theme/app_theme.dart) so every
+        // field looks identical without repeating styling here.
         labelText: label,
         suffixIcon: suffixIcon,
-        border: const OutlineInputBorder(),
       ),
     );
   }

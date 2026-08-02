@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Shared full-width primary action button used across the auth/profile
 /// screens, with a built-in loading spinner so every screen shows busy
-/// state the same way. Visual styling (colors/typography) intentionally
-/// stays on Flutter's default `ElevatedButton` theme for now — the design
-/// system pass comes later.
+/// state the same way. Colors/shape come from `ElevatedButtonThemeData`
+/// in core/theme/app_theme.dart.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -28,7 +27,10 @@ class PrimaryButton extends StatelessWidget {
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Text(label),
       ),

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_catalog.dart';
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -278,7 +279,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             const Divider(),
             if (!profile.passwordSet)
               ListTile(
-                leading: const Icon(Icons.lock_reset),
+                contentPadding: EdgeInsets.zero,
+                leading: const _OptionIconBadge(
+                  icon: Icons.lock_reset,
+                  color: AppColors.optionSetPassword,
+                ),
                 title: const Text('Set Password'),
                 subtitle: const Text(
                   'Add email + password sign-in to this account',
@@ -287,10 +292,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 onTap: _showSetPasswordDialog,
               ),
             ListTile(
-              leading: const Icon(Icons.translate),
+              contentPadding: EdgeInsets.zero,
+              leading: const _OptionIconBadge(
+                icon: Icons.translate,
+                color: AppColors.optionLanguage,
+              ),
               title: const Text('Change Language'),
               trailing: DropdownButton<String>(
                 value: profile.language,
+                underline: const SizedBox.shrink(),
                 items: const [
                   DropdownMenuItem(value: 'hi', child: Text('हिंदी')),
                   DropdownMenuItem(value: 'en', child: Text('English')),
@@ -301,20 +311,34 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             SwitchListTile(
-              secondary: const Icon(Icons.dark_mode_outlined),
+              contentPadding: EdgeInsets.zero,
+              secondary: const _OptionIconBadge(
+                icon: Icons.dark_mode_outlined,
+                color: AppColors.optionDarkMode,
+              ),
               title: const Text('Dark Mode'),
               value: profile.darkMode,
               onChanged: _toggleDarkMode,
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline),
+              contentPadding: EdgeInsets.zero,
+              leading: const _OptionIconBadge(
+                icon: Icons.delete_outline,
+                color: AppColors.optionDestructive,
+              ),
               title: const Text('Delete Account'),
+              trailing: const Icon(Icons.chevron_right),
               onTap: _confirmDeleteAccount,
             ),
             if (!widget.isFirstTimeSetup)
               ListTile(
-                leading: const Icon(Icons.logout),
+                contentPadding: EdgeInsets.zero,
+                leading: const _OptionIconBadge(
+                  icon: Icons.logout,
+                  color: AppColors.optionDestructive,
+                ),
                 title: const Text('Logout'),
+                trailing: const Icon(Icons.chevron_right),
                 onTap: () =>
                     ref.read(authControllerProvider.notifier).signOut(),
               ),
@@ -384,6 +408,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The small colored rounded-square icon used for every row in "Other
+/// Options" — one flat color per option (see `AppColors.option*`), matching
+/// the reference app's Edit Profile screen rather than a single uniform
+/// icon color.
+class _OptionIconBadge extends StatelessWidget {
+  const _OptionIconBadge({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 }
