@@ -1,9 +1,51 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 
 /// How the student's display name was originally populated. Kept so the
 /// Edit Profile screen and any future analytics can tell an auto-suggested
 /// name apart from one the student typed themselves.
 enum DisplayNameSource { email, manual, phoneManual }
+
+/// The student's theme choice. Defaults to `system` so a fresh install
+/// matches the phone's own light/dark setting out of the box — students
+/// only ever see an explicit `light`/`dark` override if they picked one
+/// themselves in Edit Profile.
+enum AppThemePreference { system, light, dark }
+
+AppThemePreference _themePreferenceFromString(String? value) {
+  switch (value) {
+    case 'light':
+      return AppThemePreference.light;
+    case 'dark':
+      return AppThemePreference.dark;
+    default:
+      return AppThemePreference.system;
+  }
+}
+
+extension AppThemePreferenceX on AppThemePreference {
+  String toStorageString() {
+    switch (this) {
+      case AppThemePreference.light:
+        return 'light';
+      case AppThemePreference.dark:
+        return 'dark';
+      case AppThemePreference.system:
+        return 'system';
+    }
+  }
+
+  ThemeMode toThemeMode() {
+    switch (this) {
+      case AppThemePreference.light:
+        return ThemeMode.light;
+      case AppThemePreference.dark:
+        return ThemeMode.dark;
+      case AppThemePreference.system:
+        return ThemeMode.system;
+    }
+  }
+}
 
 DisplayNameSource _sourceFromString(String? value) {
   switch (value) {
@@ -47,7 +89,7 @@ class UserProfile {
     this.exams = const [],
     this.passwordSet = false,
     this.language = 'hi',
-    this.darkMode = false,
+    this.themePreference = AppThemePreference.system,
   });
 
   final String uid;
@@ -65,7 +107,7 @@ class UserProfile {
   final List<String> exams;
   final bool passwordSet;
   final String language;
-  final bool darkMode;
+  final AppThemePreference themePreference;
 
   factory UserProfile.fromMap(String uid, Map<String, dynamic> map) {
     return UserProfile(
@@ -86,7 +128,9 @@ class UserProfile {
           const [],
       passwordSet: map['passwordSet'] as bool? ?? false,
       language: map['language'] as String? ?? 'hi',
-      darkMode: map['darkMode'] as bool? ?? false,
+      themePreference: _themePreferenceFromString(
+        map['themePreference'] as String?,
+      ),
     );
   }
 
@@ -106,7 +150,7 @@ class UserProfile {
       'exams': exams,
       'passwordSet': passwordSet,
       'language': language,
-      'darkMode': darkMode,
+      'themePreference': themePreference.toStorageString(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
     if (isCreate) {
@@ -130,7 +174,7 @@ class UserProfile {
     List<String>? exams,
     bool? passwordSet,
     String? language,
-    bool? darkMode,
+    AppThemePreference? themePreference,
   }) {
     return UserProfile(
       uid: uid,
@@ -148,7 +192,7 @@ class UserProfile {
       exams: exams ?? this.exams,
       passwordSet: passwordSet ?? this.passwordSet,
       language: language ?? this.language,
-      darkMode: darkMode ?? this.darkMode,
+      themePreference: themePreference ?? this.themePreference,
     );
   }
 

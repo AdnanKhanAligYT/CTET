@@ -9,7 +9,9 @@ import '../../features/auth/presentation/screens/phone_auth_screen.dart';
 import '../../features/auth/presentation/screens/suggested_name_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
+import '../../features/mock_test/presentation/screens/take_test_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/syllabus/presentation/screens/syllabus_screen.dart';
 import 'go_router_refresh_stream.dart';
 
 // Only '/welcome' is bounced away from once logged in — this exists purely
@@ -23,7 +25,7 @@ const _bounceWhenLoggedIn = ['/welcome'];
 
 // Routes that require a signed-in user; anyone signed out gets sent back
 // to Welcome instead.
-const _requiresAuth = ['/', '/profile/edit'];
+const _requiresAuth = ['/', '/profile/edit', '/mock-test/take', '/syllabus'];
 
 final appRouter = GoRouter(
   initialLocation: '/welcome',
@@ -76,6 +78,14 @@ final appRouter = GoRouter(
       builder: (context, state) => EditProfileScreen(
         isFirstTimeSetup: state.uri.queryParameters['firstTime'] == 'true',
       ),
+    ),
+    GoRoute(
+      path: '/mock-test/take',
+      builder: (context, state) => const TakeTestScreen(),
+    ),
+    GoRoute(
+      path: '/syllabus',
+      builder: (context, state) => const SyllabusScreen(),
     ),
   ],
 );

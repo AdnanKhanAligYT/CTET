@@ -142,9 +142,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  Future<void> _toggleDarkMode(bool value) async {
+  Future<void> _setThemePreference(AppThemePreference preference) async {
     if (_profile == null) return;
-    final updated = _profile!.copyWith(darkMode: value);
+    final updated = _profile!.copyWith(themePreference: preference);
     setState(() => _profile = updated);
     await ref.read(profileControllerProvider.notifier).updateProfile(updated);
   }
@@ -310,15 +310,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 },
               ),
             ),
-            SwitchListTile(
+            ListTile(
               contentPadding: EdgeInsets.zero,
-              secondary: const _OptionIconBadge(
+              leading: const _OptionIconBadge(
                 icon: Icons.dark_mode_outlined,
                 color: AppColors.optionDarkMode,
               ),
-              title: const Text('Dark Mode'),
-              value: profile.darkMode,
-              onChanged: _toggleDarkMode,
+              title: const Text('Theme'),
+              subtitle: const Text('"System" matches your phone automatically'),
+              trailing: DropdownButton<AppThemePreference>(
+                value: profile.themePreference,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  DropdownMenuItem(
+                    value: AppThemePreference.system,
+                    child: Text('System'),
+                  ),
+                  DropdownMenuItem(
+                    value: AppThemePreference.light,
+                    child: Text('Light'),
+                  ),
+                  DropdownMenuItem(
+                    value: AppThemePreference.dark,
+                    child: Text('Dark'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) _setThemePreference(value);
+                },
+              ),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,

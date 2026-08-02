@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/services/ad_service.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
 
-/// Placeholder home screen for Phase 1 (foundation: auth + profile). The
-/// real dashboard — streaks, due-today counts, quick links, exam countdown
-/// — is built in Phase 2 onward per the project plan; this just proves the
-/// end-to-end signup -> profile -> home path works.
+/// Home screen: profile summary up top, the two Phase 2 study tools
+/// (Mock Test, Syllabus) as quick-link tiles, and a banner ad at the
+/// bottom — see `core/services/ad_service.dart` for how the ad units are
+/// wired (test IDs until a real AdMob account is linked).
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key, required this.profile});
 
@@ -27,41 +29,127 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundImage: profile.photoURL != null
-                    ? NetworkImage(profile.photoURL!)
-                    : null,
-                child: profile.photoURL == null
-                    ? const Icon(Icons.person, size: 36)
-                    : null,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundImage: profile.photoURL != null
+                            ? NetworkImage(profile.photoURL!)
+                            : null,
+                        child: profile.photoURL == null
+                            ? const Icon(Icons.person, size: 28)
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome, ${profile.displayName}!',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              profile.exams.isEmpty
+                                  ? 'No exam selected yet'
+                                  : 'Preparing for: ${profile.exams.join(', ')}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  _QuickLinkTile(
+                    icon: Icons.quiz_outlined,
+                    color: AppColors.optionSetPassword,
+                    title: 'Mock Test',
+                    subtitle: 'Today\'s due questions, mixed order',
+                    onTap: () => context.push('/mock-test/take'),
+                  ),
+                  const SizedBox(height: 12),
+                  _QuickLinkTile(
+                    icon: Icons.checklist_outlined,
+                    color: AppColors.optionLanguage,
+                    title: 'Syllabus Tracker',
+                    subtitle: 'Mark topics as you cover them',
+                    onTap: () => context.push('/syllabus'),
+                  ),
+                  const SizedBox(height: 28),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        ref.read(authControllerProvider.notifier).signOut(),
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Welcome, ${profile.displayName}!',
-                style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const AppBannerAd(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickLinkTile extends StatelessWidget {
+  const _QuickLinkTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(height: 8),
-              Text(
-                profile.exams.isEmpty
-                    ? 'No exam selected yet'
-                    : 'Preparing for: ${profile.exams.join(', ')}',
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                ],
               ),
-              const SizedBox(height: 32),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).signOut(),
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-              ),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
         ),
       ),
     );
