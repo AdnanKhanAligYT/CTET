@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/models/user_profile.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/ad_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/profile/application/profile_controller.dart';
 import 'firebase_options.dart';
@@ -14,9 +15,11 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Ads never block startup: initialize() itself isn't awaited, so a slow
-  // or unreachable ad network only delays ads, not the whole app.
+  // Ads and notification setup never block startup: neither call is
+  // awaited, so a slow/unreachable network only delays those features,
+  // not the whole app.
   unawaited(AdService.initialize());
+  unawaited(NotificationService.initialize());
   runApp(const ProviderScope(child: App()));
 }
 

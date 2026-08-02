@@ -10,6 +10,7 @@ import '../../features/auth/presentation/screens/suggested_name_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
 import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
+import '../../features/history/presentation/screens/history_screen.dart';
 import '../../features/mock_test/presentation/screens/take_test_screen.dart';
 import '../../features/notepad/presentation/screens/notepad_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
@@ -36,6 +37,7 @@ const _requiresAuth = [
   '/dictionary',
   '/timetable',
   '/notepad',
+  '/history',
 ];
 
 final appRouter = GoRouter(
@@ -109,6 +111,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/notepad',
       builder: (context, state) => const NotepadScreen(),
+    ),
+    GoRoute(
+      path: '/history',
+      builder: (context, state) => const HistoryScreen(),
     ),
   ],
 );

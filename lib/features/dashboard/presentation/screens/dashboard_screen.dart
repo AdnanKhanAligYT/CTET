@@ -107,6 +107,14 @@ class DashboardScreen extends ConsumerWidget {
                     subtitle: 'Quick notes while you study',
                     onTap: () => context.push('/notepad'),
                   ),
+                  const SizedBox(height: 12),
+                  _QuickLinkTile(
+                    icon: Icons.history,
+                    color: AppColors.tileHistory,
+                    title: 'History',
+                    subtitle: 'Your past mock test scores',
+                    onTap: () => context.push('/history'),
+                  ),
                   const SizedBox(height: 28),
                   OutlinedButton.icon(
                     onPressed: () =>

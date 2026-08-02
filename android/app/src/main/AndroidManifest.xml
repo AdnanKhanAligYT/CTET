@@ -4,6 +4,10 @@
          button; requesting it is never blocking — see EditProfileScreen. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Required on Android 13+ for NotificationService to be allowed to
+         show reminder pushes at all; the runtime prompt still happens via
+         FirebaseMessaging.requestPermission(). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="ctet_tet_prep"
         android:name="${applicationName}"

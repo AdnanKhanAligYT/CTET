@@ -42,4 +42,5 @@ class AppColors {
   static const tileDictionary = Color(0xFF12977A);
   static const tileTimetable = Color(0xFF4C3FCF);
   static const tileNotepad = Color(0xFFB5541F);
+  static const tileHistory = Color(0xFF6B7280);
 }
