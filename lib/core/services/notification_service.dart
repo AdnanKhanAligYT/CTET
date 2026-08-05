@@ -1,15 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
-/// Client-side half of the reminders system (streak nudges, due-review
-/// alerts, timetable pings, weekly summary — see `functions/index.js` for
-/// the scheduled Cloud Functions that actually send these). This service
-/// only handles: asking for permission, keeping the device's FCM token
-/// saved on the student's profile so a Cloud Function can target it, and
-/// showing a system notification when a push arrives while the app is
-/// open (FCM doesn't display foreground notifications on its own).
+import '../../features/timetable/domain/timetable_block.dart';
+
+/// Local-only reminders. There is no server component anymore (see
+/// README "Reminders" — the old Firebase Cloud Functions were dropped
+/// along with the rest of Firebase): every reminder here is scheduled
+/// entirely on-device with `flutter_local_notifications`, using
+/// `zonedSchedule`'s daily/weekly repeat matching instead of a server cron
+/// job. All times assume IST, since every exam this app supports is
+/// India-only.
 class NotificationService {
   NotificationService._();
 
@@ -23,66 +24,137 @@ class NotificationService {
     importance: Importance.high,
   );
 
+  static const _dueReviewsNotificationId = 1000;
+  static const _weeklySummaryNotificationId = 1001;
+  // Timetable blocks get ids starting here, one per block, so
+  // rescheduling can cancel exactly the old set without touching the
+  // fixed ids above.
+  static const _timetableNotificationIdBase = 2000;
+
   static Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
 
-    await FirebaseMessaging.instance.requestPermission();
+    tz_data.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
 
     await _localNotifications.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
     );
-    await _localNotifications
+    final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_channel);
+        >();
+    await androidPlugin?.createNotificationChannel(_channel);
+    await androidPlugin?.requestNotificationsPermission();
+    await androidPlugin?.requestExactAlarmsPermission();
 
-    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
-
-    // Whenever someone signs in (fresh login, or an already-logged-in
-    // session resuming), make sure this device's token is on their
-    // profile — cheap to repeat, and covers the token having rotated.
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null) _saveTokenForUser(user.uid);
-    });
-    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) _saveToken(uid, token);
-    });
+    await _scheduleDueReviewsReminder();
+    await _scheduleWeeklySummaryReminder();
   }
 
-  static Future<void> _saveTokenForUser(String uid) async {
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null) await _saveToken(uid, token);
+  /// Daily nudge — kept as a fixed 8 AM prompt rather than a live due-count
+  /// (that would need a database round trip on every app start just to
+  /// keep one notification's text current); tapping it takes the student
+  /// to Mock Test / Dictionary same as before.
+  static Future<void> _scheduleDueReviewsReminder() async {
+    await _localNotifications.zonedSchedule(
+      id: _dueReviewsNotificationId,
+      title: 'Revision due today',
+      body: 'Check Mock Test and Dictionary for items waiting to be reviewed.',
+      scheduledDate: _nextInstanceOf(hour: 8, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
   }
 
-  static Future<void> _saveToken(String uid, String token) {
-    // A student may be logged in on more than one device, so tokens are
-    // an (deduplicated) set rather than a single field.
-    return FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'fcmTokens': FieldValue.arrayUnion([token]),
-    }, SetOptions(merge: true));
+  static Future<void> _scheduleWeeklySummaryReminder() async {
+    await _localNotifications.zonedSchedule(
+      id: _weeklySummaryNotificationId,
+      title: 'Your week in review',
+      body: 'See how your mock test scores went this week in History.',
+      scheduledDate: _nextInstanceOf(hour: 19, minute: 0, weekday: DateTime.sunday),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
   }
 
-  static Future<void> _showForegroundNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) return;
-    await _localNotifications.show(
-      id: notification.hashCode,
-      title: notification.title,
-      body: notification.body,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
+  /// Re-syncs the timetable reminders to exactly the blocks passed in —
+  /// call this whenever the student's timetable changes (after add/toggle
+  /// /delete). Each block gets one recurring weekly notification 10
+  /// minutes before it starts.
+  static Future<void> scheduleTimetableReminders(
+    List<TimetableBlock> blocks,
+  ) async {
+    // Clear the old set first so a deleted block's reminder doesn't linger.
+    for (var i = 0; i < 200; i++) {
+      await _localNotifications.cancel(id: _timetableNotificationIdBase + i);
+    }
+    for (var i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      final reminderMinutes = block.startMinutes - 10;
+      if (reminderMinutes < 0) continue;
+      await _localNotifications.zonedSchedule(
+        id: _timetableNotificationIdBase + i,
+        title: 'Time to study',
+        body: '${block.subject} starts in 10 minutes.',
+        scheduledDate: _nextInstanceOf(
+          hour: reminderMinutes ~/ 60,
+          minute: reminderMinutes % 60,
+          weekday: block.dayOfWeek,
         ),
+        notificationDetails: _details(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    }
+  }
+
+  static NotificationDetails _details() {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channel.id,
+        _channel.name,
+        channelDescription: _channel.description,
+        importance: Importance.high,
+        priority: Priority.high,
       ),
     );
+  }
+
+  /// Next occurrence of [hour]:[minute] IST, optionally pinned to a
+  /// specific [weekday] (`DateTime.weekday`-style, 1 = Monday .. 7 =
+  /// Sunday). Used as the anchor moment for a repeating `zonedSchedule` —
+  /// the `matchDateTimeComponents` argument at each call site is what
+  /// actually makes it recur.
+  static tz.TZDateTime _nextInstanceOf({
+    required int hour,
+    required int minute,
+    int? weekday,
+  }) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+    if (weekday != null) {
+      while (scheduled.weekday != weekday) {
+        scheduled = scheduled.add(const Duration(days: 1));
+      }
+    }
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(
+        Duration(days: weekday != null ? 7 : 1),
+      );
+    }
+    return scheduled;
   }
 }

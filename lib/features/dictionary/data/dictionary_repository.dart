@@ -1,42 +1,43 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/dictionary_word.dart';
 import '../../../core/models/review_progress.dart';
 
-/// Firestore access for the dictionary feature — same shape as
+/// Supabase access for the dictionary feature — same shape as
 /// `MockTestRepository` (global content + per-user review progress), just
-/// pointed at `/dictionaryWords` and `/users/{uid}/dictionaryProgress`.
+/// pointed at `dictionary_words` and `dictionary_progress`.
 class DictionaryRepository {
-  DictionaryRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  DictionaryRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
   Future<List<DictionaryWord>> fetchAllWords() async {
-    final snapshot = await _firestore.collection('dictionaryWords').get();
-    return snapshot.docs
-        .map((doc) => DictionaryWord.fromMap(doc.id, doc.data()))
+    final rows = await _client.from('dictionary_words').select();
+    return rows
+        .map((row) => DictionaryWord.fromMap(row['id'] as String, row))
         .toList();
   }
 
   Future<Map<String, ReviewProgress>> fetchProgress(String uid) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('dictionaryProgress')
-        .get();
+    final rows = await _client
+        .from('dictionary_progress')
+        .select()
+        .eq('user_id', uid);
     return {
-      for (final doc in snapshot.docs)
-        doc.id: ReviewProgress.fromMap(doc.id, doc.data()),
+      for (final row in rows)
+        row['word_id'] as String: ReviewProgress.fromMap(
+          row['word_id'] as String,
+          row,
+        ),
     };
   }
 
   Future<void> saveProgress(String uid, ReviewProgress progress) {
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('dictionaryProgress')
-        .doc(progress.itemId)
-        .set(progress.toMap());
+    return _client.from('dictionary_progress').upsert({
+      'user_id': uid,
+      'word_id': progress.itemId,
+      ...progress.toMap(),
+    }, onConflict: 'user_id,word_id');
   }
 }

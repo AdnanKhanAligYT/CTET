@@ -32,13 +32,13 @@ class Question {
       subject: map['subject'] as String? ?? '',
       topic: map['topic'] as String? ?? '',
       examTags:
-          (map['examTags'] as List?)?.map((e) => e.toString()).toList() ??
+          (map['exam_tags'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
       text: map['text'] as String? ?? '',
       options:
           (map['options'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
-      correctOptionIndex: (map['correctOptionIndex'] as num?)?.toInt() ?? 0,
+      correctOptionIndex: (map['correct_option_index'] as num?)?.toInt() ?? 0,
       explanations:
           (map['explanations'] as List?)?.map((e) => e.toString()).toList() ??
           const [],

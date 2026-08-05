@@ -1,101 +1,87 @@
 # CTET & State TET Prep — Mobile App
 
-Flutter + Firebase rewrite of the Study-App study tool, built to actually
+Flutter + Supabase rewrite of the Study-App study tool, built to actually
 ship on the Google Play Store with real student accounts. This is a fresh
-project, not an edit of the PHP code in the rest of this repo. The full
-architecture/decisions are written up in the project plan this was built
-from (Firebase Auth with Email + Mobile OTP, Firestore data model,
-feature-first Flutter structure).
+project, not an edit of the PHP code in the rest of this repo.
 
-Progress so far: **Phase 1** (Firebase Auth foundation, Edit Profile),
+Progress so far: **Phase 1** (Auth foundation, Edit Profile),
 **Phase 2** (Mock Test + Syllabus Tracker), and **Phase 3** (Dictionary,
-Timetable, Notepad, History, and reminder push notifications) are all
+Timetable, Notepad, History, and local reminder notifications) are all
 built. Only a video player is left unbuilt — deliberately, see "What's
 NOT here yet" below.
 
+The backend was originally built on Firebase, then migrated to
+**Supabase** (Postgres + Auth) because enabling Cloud Firestore required
+linking Google Cloud billing even on the free tier — Supabase's free tier
+needs no card at all. See "What changed from Firebase" at the bottom if
+you're picking this repo up mid-migration.
+
 ## One-time setup (you need to do this — I don't have access to your
-## Google/Firebase account)
+## Supabase account)
 
-1. **Create a Firebase project.** Go to https://console.firebase.google.com,
-   create a new project (e.g. `ctet-tet-prep`).
-2. **Enable Authentication providers.** In the Firebase Console →
-   Authentication → Sign-in method, enable:
-   - **Email/Password**
-   - **Phone** (you'll need to add SHA-1/SHA-256 fingerprints of your
-     debug and release keystores under Project Settings → Your apps →
-     Android app, once you generate/reserve those keystores)
-3. **Enable Cloud Firestore** (Firebase Console → Firestore Database →
-   Create database, start in production mode).
-4. **Install the FlutterFire CLI** (one-time, on your own machine):
+1. **Create a Supabase project.** Go to https://supabase.com, sign up
+   (GitHub login works, no card needed), and create a new project (e.g.
+   `ctet-tet-prep`). Pick a region close to India if offered.
+2. **Run the database schema.** Supabase Dashboard → SQL Editor → New
+   query → paste the entire contents of `supabase/schema.sql` from this
+   repo → Run. This creates every table (`profiles`, `questions`,
+   `question_progress`, `dictionary_words`, `dictionary_progress`,
+   `syllabus_topics`, `syllabus_progress`, `timetable_blocks`, `notes`,
+   `attempts`) with Row Level Security policies already wired up — no
+   separate "deploy rules" step like Firestore needed.
+3. **Turn off forced email confirmation** (so email signup lands students
+   straight in the app, matching the original non-blocking design):
+   Dashboard → Authentication → Sign In / Providers → Email → toggle
+   **"Confirm email"** OFF. Leave **Phone** provider's defaults as-is —
+   see step 5 for the one thing phone signup still needs.
+4. **Copy your API keys.** Dashboard → Project Settings → API Keys →
+   copy the **Project URL** and the **Publishable key**. Paste them into
+   `lib/core/supabase_config.dart` (currently `REPLACE_ME` placeholders).
+   Both are safe to ship in the app — access is controlled by the Row
+   Level Security policies from step 2, not by keeping these secret.
+5. **Set up an SMS provider for Phone OTP.** Unlike Firebase, Supabase
+   doesn't send SMS itself — Dashboard → Authentication → Providers →
+   Phone → pick a provider (Twilio, MessageBird, Vonage, or similar) and
+   enter its credentials. Every provider needs its own account and
+   (unlike Supabase itself) does typically require a card, since sending
+   an SMS costs a small amount per message — this is unavoidable for real
+   SMS delivery, not specific to Supabase. If you want to test the rest of
+   the app first without paying for SMS, you can skip this step for now
+   and just use Email signup — Phone signup will error until a provider is
+   configured.
+6. **Deploy the account-deletion function** (Play Store requires an
+   in-app way to delete your account, and only a backend can actually
+   delete an `auth.users` row — see `supabase/functions/delete-account`):
    ```
-   dart pub global activate flutterfire_cli
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>
+   npx supabase functions deploy delete-account
    ```
-5. **Connect this project to your Firebase project** — from inside this
-   folder:
-   ```
-   flutterfire configure
-   ```
-   Pick your Firebase project, select Android (and iOS if you're building
-   that too). This **overwrites** `lib/firebase_options.dart` (currently a
-   placeholder with dummy `REPLACE_ME` values) with your project's real
-   keys, and drops the matching `google-services.json` /
-   `GoogleService-Info.plist` into the native project folders.
-6. **Deploy the security rules** in `firestore.rules`:
-   ```
-   firebase deploy --only firestore:rules
-   ```
-   (requires `firebase login` and a `firebase.json` — running
-   `firebase init firestore` in this folder once will create that file and
-   point it at `firestore.rules`.)
+   No billing needed — Edge Functions have a generous free tier.
 7. **Seed some content to test with** — Mock Test, Syllabus, and
-   Dictionary are all empty until you add documents to Firestore yourself
-   (Firebase Console → Firestore Database → Start collection). Timetable,
-   Notepad, and History don't need seeding — students create that content
-   themselves in the app.
-   - `questions/{autoId}`: `subject`, `topic`, `examTags` (array, e.g.
-     `["CTET Paper 1"]`), `text`, `options` (array of strings),
-     `correctOptionIndex` (number), `explanations` (array, one string per
-     option, same length as `options`)
-   - `syllabusTopics/{autoId}`: `exam` (must match one of the strings in
-     `lib/core/models/exam_catalog.dart`), `subject`, `unit`, `topicName`,
-     `order` (number, controls display order)
-   - `dictionaryWords/{autoId}`: `word`, `meaningHi`, `meaningEn`,
-     `exampleSentence` (all strings)
+   Dictionary are all empty until you add rows yourself (Supabase
+   Dashboard → Table Editor → pick the table → Insert row, or paste SQL
+   `insert into ...` statements into the SQL Editor).
+   - `questions`: `subject`, `topic`, `exam_tags` (text array, e.g.
+     `{"CTET Paper 1"}`), `text`, `options` (array of strings),
+     `correct_option_index` (number), `explanations` (array, one string
+     per option, same length as `options`)
+   - `syllabus_topics`: `exam` (must match one of the strings in
+     `lib/core/models/exam_catalog.dart`), `subject`, `unit`,
+     `topic_name`, `order` (number, controls display order)
+   - `dictionary_words`: `word`, `meaning_hi`, `meaning_en`,
+     `example_sentence` (all strings)
 
-## Push notifications / reminders
+## Reminders
 
-The client side (`lib/core/services/notification_service.dart`) is
-always on — it asks for notification permission and saves each device's
-FCM token to `/users/{uid}.fcmTokens`. The *sending* side
-(`functions/index.js`) is separate and needs deploying yourself:
-
-1. **Upgrade to the Blaze (pay-as-you-go) plan** in the Firebase Console
-   — Cloud Functions don't run on the free Spark plan. In practice, for a
-   small number of students, actual usage cost is close to ₹0/month; you
-   only pay once invocations scale up.
-2. Install the Firebase CLI if you haven't: `npm install -g firebase-tools`,
-   then `firebase login`.
-3. From this folder: `firebase init functions` (if you don't already have
-   a `firebase.json`) — when it asks, point it at the existing
-   `functions/` folder rather than overwriting it.
-4. `cd functions && npm install`
-5. `firebase deploy --only functions`
-
-Three scheduled functions are included, matching what's actually built in
-the app (no functions for features that don't exist yet, like streaks or
-daily goals):
-- `dueReviewsReminderFn` — daily 8 AM IST, "N items due today" (mock test
-  questions + dictionary words combined)
-- `timetableReminderFn` — every 15 minutes, pings a student whose next
-  timetable block is starting soon
-- `weeklySummaryFn` — Sunday 7 PM IST, a score summary of the week's mock
-  tests
-
-The first deploy will likely fail once with a Firestore error containing
-a direct link to create a required composite index (for querying across
-all students' `questionProgress`/`dictionaryProgress`/`timetable`
-subcollections) — click that link, wait a few minutes for the index to
-build, then redeploy.
+Fully client-side now (`lib/core/services/notification_service.dart`) —
+no server, no billing, nothing to deploy. Uses
+`flutter_local_notifications`' exact-alarm scheduling instead of a
+Firebase Cloud Function + FCM push:
+- A daily 8 AM reminder to check due Mock Test/Dictionary reviews.
+- A weekly Sunday 7 PM nudge to check History.
+- One reminder per Timetable block, 10 minutes before it starts, that
+  re-syncs automatically whenever the Timetable screen loads.
 
 ## Ads (AdMob)
 
@@ -162,10 +148,9 @@ the app so far, and the easiest to silently break.
   (go_router + auth-state redirect), `NameSuggestionService`,
   `SpacedRepetitionService` (shared by Mock Test + Dictionary),
   `AdService`, `NotificationService`.
-- `functions/index.js` — the three scheduled Cloud Functions described
-  above (not deployed automatically — see "Push notifications" above).
-- `firestore.rules` — per-user data isolation + read-only shared content
-  collections.
+- `supabase/schema.sql` — every table + Row Level Security policy.
+- `supabase/functions/delete-account/` — the one server-side piece this
+  app needs (self-service account deletion; see step 6 above).
 
 ## What's NOT here yet
 
@@ -179,3 +164,24 @@ dictionary, timetable, notepad, history, reminders) is built.
 The root-level PHP file-manager tool from the rest of the original
 Study-App repo was never brought over here — it's a private dev tool, not
 something students should ever see.
+
+## What changed from Firebase
+
+Started on Firebase Auth + Cloud Firestore + Cloud Functions + FCM;
+switched to Supabase because Firestore (even on the free Spark plan)
+started requiring a linked Google Cloud billing account just to create
+the database. Supabase's free tier needs no card. What that meant
+concretely:
+- `cloud_firestore` → Postgres tables (`supabase/schema.sql`), queried
+  via `supabase_flutter`'s Postgrest client instead of
+  `.collection().doc()`.
+- `firebase_auth` → Supabase Auth (`GoTrueClient`) — same two sign-in
+  methods (Email/Password, Phone OTP), same UX flow.
+- Account deletion moved from a direct client-side `user.delete()` call
+  to a small Edge Function (`supabase/functions/delete-account`), since
+  Supabase (correctly) doesn't let a client app delete its own
+  `auth.users` row directly — only a `service_role`-authenticated
+  backend can, same as most real auth systems.
+- Scheduled Cloud Functions + FCM push → fully local, on-device
+  reminders via `flutter_local_notifications`' exact-alarm scheduling
+  (see "Reminders" above) — no server, nothing to deploy or pay for.

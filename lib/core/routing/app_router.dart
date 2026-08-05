@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/screens/email_auth_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
@@ -43,10 +43,10 @@ const _requiresAuth = [
 final appRouter = GoRouter(
   initialLocation: '/welcome',
   refreshListenable: GoRouterRefreshStream(
-    FirebaseAuth.instance.authStateChanges(),
+    Supabase.instance.client.auth.onAuthStateChange,
   ),
   redirect: (context, state) {
-    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    final loggedIn = Supabase.instance.client.auth.currentUser != null;
     final loc = state.matchedLocation;
 
     if (loggedIn && _bounceWhenLoggedIn.contains(loc)) return '/';

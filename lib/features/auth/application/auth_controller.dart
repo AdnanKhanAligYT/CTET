@@ -1,23 +1,26 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/auth_state.dart';
 
-/// Live stream of the current Firebase user — the single source of truth
+final _client = Supabase.instance.client;
+
+/// Live stream of the current Supabase user — the single source of truth
 /// the router uses to decide whether a visitor is logged in at all.
 final authStateChangesProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
+  return _client.auth.onAuthStateChange.map((data) => data.session?.user);
 });
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );
 
-/// Wraps every FirebaseAuth call the auth screens need. Kept deliberately
-/// thin — it does not touch Firestore (see ProfileController for that) so
-/// auth failures and profile-write failures stay easy to tell apart.
+/// Wraps every Supabase Auth call the auth screens need. Kept deliberately
+/// thin — it does not touch the `profiles` table (see ProfileController
+/// for that) so auth failures and profile-write failures stay easy to
+/// tell apart.
 class AuthController extends Notifier<AuthState> {
-  FirebaseAuth get _auth => FirebaseAuth.instance;
+  GoTrueClient get _auth => _client.auth;
 
   @override
   AuthState build() => const AuthState();
@@ -32,91 +35,48 @@ class AuthController extends Notifier<AuthState> {
     required String email,
     required String password,
   }) => _run(() async {
-    await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-    // Non-blocking by design (see plan §3): students aren't forced to
-    // verify before entering the app, just nudged.
-    await _auth.currentUser?.sendEmailVerification();
+    await _auth.signUp(email: email.trim(), password: password);
   });
 
   Future<bool> signInWithEmail({
     required String email,
     required String password,
   }) => _run(() async {
-    await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    await _auth.signInWithPassword(email: email.trim(), password: password);
   });
 
   Future<bool> sendPasswordResetEmail(String email) => _run(() async {
-    await _auth.sendPasswordResetEmail(email: email.trim());
+    await _auth.resetPasswordForEmail(email.trim());
   });
 
-  Future<void> resendEmailVerification() async {
-    await _auth.currentUser?.sendEmailVerification();
-  }
-
-  /// Kicks off Firebase Phone Auth. On some Android devices Firebase can
-  /// auto-verify the code without the user typing anything
-  /// (`verificationCompleted`); the OTP screen only needs to handle the
-  /// `codeSent` case since `verificationCompleted` signs the user in
-  /// directly here.
-  Future<void> startPhoneVerification({
-    required String phoneNumber,
-    int? forceResendingToken,
-  }) async {
+  /// Sends a 6-digit SMS code via Supabase Phone Auth. Works for both a
+  /// brand-new number and a returning student's number — Supabase creates
+  /// the account transparently on first verify, same as the old Firebase
+  /// Phone Auth behaviour.
+  Future<void> startPhoneVerification({required String phoneNumber}) async {
     state = state.copyWith(
       status: AuthStatus.loading,
       clearError: true,
       phoneNumber: phoneNumber,
+      otpRequested: false,
     );
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      forceResendingToken: forceResendingToken,
-      timeout: const Duration(seconds: 60),
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        try {
-          await _auth.signInWithCredential(credential);
-          state = state.copyWith(status: AuthStatus.idle);
-        } on FirebaseAuthException catch (e) {
-          state = state.copyWith(
-            status: AuthStatus.error,
-            errorMessage: e.message ?? 'Verification failed.',
-          );
-        }
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        state = state.copyWith(
-          status: AuthStatus.error,
-          errorMessage: e.message ?? 'Could not send OTP.',
-        );
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        state = state.copyWith(
-          status: AuthStatus.idle,
-          verificationId: verificationId,
-          resendToken: resendToken,
-        );
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        state = state.copyWith(verificationId: verificationId);
-      },
-    );
+    try {
+      await _auth.signInWithOtp(phone: phoneNumber);
+      state = state.copyWith(status: AuthStatus.idle, otpRequested: true);
+    } on AuthException catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: e.message,
+      );
+    }
   }
 
   Future<bool> confirmOtp(String smsCode) => _run(() async {
-    final verificationId = state.verificationId;
-    if (verificationId == null) {
+    final phone = state.phoneNumber;
+    if (phone == null) {
       throw StateError('No OTP request in progress.');
     }
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
-    await _auth.signInWithCredential(credential);
+    await _auth.verifyOTP(phone: phone, token: smsCode, type: OtpType.sms);
   });
 
   /// Lets a phone-only account add an email+password sign-in method (the
@@ -126,13 +86,9 @@ class AuthController extends Notifier<AuthState> {
     required String email,
     required String password,
   }) => _run(() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('Not signed in.');
-    final credential = EmailAuthProvider.credential(
-      email: email.trim(),
-      password: password,
+    await _auth.updateUser(
+      UserAttributes(email: email.trim(), password: password),
     );
-    await user.linkWithCredential(credential);
   });
 
   Future<void> signOut() async {
@@ -146,7 +102,7 @@ class AuthController extends Notifier<AuthState> {
       await action();
       state = state.copyWith(status: AuthStatus.idle);
       return true;
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
         errorMessage: _friendlyMessage(e),
@@ -158,26 +114,23 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  String _friendlyMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'email-already-in-use':
-        return 'An account already exists for this email — try logging in instead.';
-      case 'weak-password':
-        return 'Password should be at least 6 characters.';
-      case 'user-not-found':
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'Incorrect email or password.';
-      case 'invalid-verification-code':
-        return 'That code looks wrong — please check and try again.';
-      case 'session-expired':
-        return 'This code has expired — please request a new one.';
-      case 'credential-already-in-use':
-        return 'This is already linked to another account.';
-      default:
-        return e.message ?? 'Something went wrong. Please try again.';
+  String _friendlyMessage(AuthException e) {
+    final msg = e.message.toLowerCase();
+    if (msg.contains('already registered') || msg.contains('already exists')) {
+      return 'An account already exists for this email — try logging in instead.';
     }
+    if (msg.contains('invalid login credentials')) {
+      return 'Incorrect email or password.';
+    }
+    if (msg.contains('password') && msg.contains('least')) {
+      return 'Password should be at least 6 characters.';
+    }
+    if (msg.contains('expired')) {
+      return 'This code has expired — please request a new one.';
+    }
+    if (msg.contains('otp') || msg.contains('token')) {
+      return 'That code looks wrong — please check and try again.';
+    }
+    return e.message;
   }
 }

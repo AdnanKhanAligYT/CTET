@@ -1,32 +1,43 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/timetable_block.dart';
 
 class TimetableRepository {
-  TimetableRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  TimetableRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
-
-  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
-      _firestore.collection('users').doc(uid).collection('timetable');
+  final SupabaseClient _client;
 
   Future<List<TimetableBlock>> fetchBlocks(String uid) async {
-    final snapshot = await _collection(uid).get();
-    return snapshot.docs
-        .map((doc) => TimetableBlock.fromMap(doc.id, doc.data()))
+    final rows = await _client
+        .from('timetable_blocks')
+        .select()
+        .eq('user_id', uid);
+    return rows
+        .map((row) => TimetableBlock.fromMap(row['id'] as String, row))
         .toList();
   }
 
   Future<void> addBlock(String uid, TimetableBlock block) {
-    return _collection(uid).add(block.toMap());
+    return _client.from('timetable_blocks').insert({
+      'user_id': uid,
+      ...block.toMap(),
+    });
   }
 
   Future<void> setDone(String uid, String blockId, bool done) {
-    return _collection(uid).doc(blockId).update({'done': done});
+    return _client
+        .from('timetable_blocks')
+        .update({'done': done})
+        .eq('user_id', uid)
+        .eq('id', blockId);
   }
 
   Future<void> deleteBlock(String uid, String blockId) {
-    return _collection(uid).doc(blockId).delete();
+    return _client
+        .from('timetable_blocks')
+        .delete()
+        .eq('user_id', uid)
+        .eq('id', blockId);
   }
 }

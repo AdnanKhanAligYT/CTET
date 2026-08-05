@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../data/notepad_repository.dart';
 import '../../domain/note.dart';
@@ -24,7 +24,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
   }
 
   Future<void> _load() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
     final notes = await _repository.fetchNotes(uid);
     if (!mounted) return;

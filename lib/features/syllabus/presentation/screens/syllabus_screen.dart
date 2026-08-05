@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/syllabus_topic.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -42,11 +42,11 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
       });
       return;
     }
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     final topics = await _repository.fetchTopicsForExams(exams);
-    final progress = await _repository.fetchProgress(user.uid);
+    final progress = await _repository.fetchProgress(user.id);
     if (!mounted) return;
     setState(() {
       _topics = topics;
@@ -56,12 +56,12 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
   }
 
   Future<void> _cycleStatus(SyllabusTopic topic) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     final current = _progress[topic.id] ?? TopicStatus.notStarted;
     final next = current.next;
     setState(() => _progress = {..._progress, topic.id: next});
-    await _repository.setStatus(user.uid, topic.id, next);
+    await _repository.setStatus(user.id, topic.id, next);
   }
 
   @override

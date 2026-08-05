@@ -19,9 +19,9 @@ class DictionaryWord {
     return DictionaryWord(
       id: id,
       word: map['word'] as String? ?? '',
-      meaningHi: map['meaningHi'] as String? ?? '',
-      meaningEn: map['meaningEn'] as String? ?? '',
-      exampleSentence: map['exampleSentence'] as String? ?? '',
+      meaningHi: map['meaning_hi'] as String? ?? '',
+      meaningEn: map['meaning_en'] as String? ?? '',
+      exampleSentence: map['example_sentence'] as String? ?? '',
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/dictionary_word.dart';
@@ -31,14 +31,14 @@ class _WordReviewScreenState extends State<WordReviewScreen> {
   DictionaryWord get _currentWord => widget.dueWords[_currentIndex];
 
   Future<void> _answer(bool knewIt) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       final updated = _spacedRepetition.recordAnswer(
         itemId: _currentWord.id,
         current: null,
         wasCorrect: knewIt,
       );
-      await _repository.saveProgress(user.uid, updated);
+      await _repository.saveProgress(user.id, updated);
     }
     setState(() {
       _reviewedCount++;

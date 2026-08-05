@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/auth_controller.dart';
@@ -52,10 +52,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     if (authState.phoneNumber == null) return;
     await ref
         .read(authControllerProvider.notifier)
-        .startPhoneVerification(
-          phoneNumber: authState.phoneNumber!,
-          forceResendingToken: authState.resendToken,
-        );
+        .startPhoneVerification(phoneNumber: authState.phoneNumber!);
     _startCooldown();
   }
 
@@ -67,11 +64,13 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     _navigateAfterSignIn();
   }
 
-  /// Firebase Phone Auth never sets a display name on its own, so a brand
-  /// new phone account has an empty `displayName`; a returning student who
+  /// Phone Auth never sets a display name on its own, so a brand new phone
+  /// account has none stored in `user_metadata`; a returning student who
   /// already completed setup will have one from last time.
   void _navigateAfterSignIn() {
-    final displayName = FirebaseAuth.instance.currentUser?.displayName;
+    final displayName =
+        Supabase.instance.client.auth.currentUser?.userMetadata?['display_name']
+            as String?;
     if (displayName == null || displayName.isEmpty) {
       context.go('/auth/manual-name');
     } else {
@@ -81,13 +80,6 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Handles the case where Android auto-verifies the SMS in the
-    // background before the student types anything.
-    ref.listen(authControllerProvider, (previous, next) {
-      if (FirebaseAuth.instance.currentUser != null) {
-        _navigateAfterSignIn();
-      }
-    });
     final authState = ref.watch(authControllerProvider);
 
     return Scaffold(

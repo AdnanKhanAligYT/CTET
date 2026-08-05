@@ -1,6 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/timetable_repository.dart';
 import '../../domain/timetable_block.dart';
@@ -17,7 +20,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   bool _loading = true;
   List<TimetableBlock> _blocks = const [];
 
-  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  String? get _uid => Supabase.instance.client.auth.currentUser?.id;
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       _blocks = blocks;
       _loading = false;
     });
+    unawaited(NotificationService.scheduleTimetableReminders(blocks));
   }
 
   Future<void> _toggleDone(TimetableBlock block) async {
@@ -208,7 +212,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
   }
 
   Future<void> _save() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     final subject = _subjectController.text.trim();
     if (uid == null || subject.isEmpty) return;
 

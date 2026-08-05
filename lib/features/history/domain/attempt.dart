@@ -1,7 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-/// Mirrors `/users/{uid}/attempts/{id}` — one completed (or stopped-early)
-/// mock test session, written by `MockTestRepository.saveAttempt`.
+/// Mirrors an `attempts` row (see `supabase/schema.sql`) — one completed
+/// (or stopped-early) mock test session, written by
+/// `MockTestRepository.saveAttempt`.
 class Attempt {
   const Attempt({
     required this.id,
@@ -20,11 +19,12 @@ class Attempt {
   factory Attempt.fromMap(String id, Map<String, dynamic> map) {
     return Attempt(
       id: id,
-      totalQuestions: (map['totalQuestions'] as num?)?.toInt() ?? 0,
-      correctCount: (map['correctCount'] as num?)?.toInt() ?? 0,
-      wrongCount: (map['wrongCount'] as num?)?.toInt() ?? 0,
-      submittedAt:
-          (map['submittedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      totalQuestions: (map['total_questions'] as num?)?.toInt() ?? 0,
+      correctCount: (map['correct_count'] as num?)?.toInt() ?? 0,
+      wrongCount: (map['wrong_count'] as num?)?.toInt() ?? 0,
+      submittedAt: map['submitted_at'] != null
+          ? DateTime.parse(map['submitted_at'] as String)
+          : DateTime.now(),
     );
   }
 }

@@ -7,40 +7,35 @@ class AuthState {
   const AuthState({
     this.status = AuthStatus.idle,
     this.errorMessage,
-    this.verificationId,
-    this.resendToken,
+    this.otpRequested = false,
     this.phoneNumber,
   });
 
   final AuthStatus status;
   final String? errorMessage;
 
-  /// Set once Firebase has sent an OTP; required to confirm the code.
-  final String? verificationId;
+  /// Set once Supabase has sent an OTP to `phoneNumber`; required before
+  /// `confirmOtp` can be called.
+  final bool otpRequested;
 
-  /// Android auto-retrieval resend token, passed back into
-  /// `verifyPhoneNumber` on "Resend OTP".
-  final int? resendToken;
-
-  /// Kept so the OTP screen can display "Code sent to +91XXXXXXXXXX".
+  /// Kept so the OTP screen can display "Code sent to +91XXXXXXXXXX", and
+  /// so "Resend OTP" knows which number to resend to.
   final String? phoneNumber;
 
   bool get isLoading => status == AuthStatus.loading;
-  bool get otpSent => verificationId != null;
+  bool get otpSent => otpRequested;
 
   AuthState copyWith({
     AuthStatus? status,
     String? errorMessage,
     bool clearError = false,
-    String? verificationId,
-    int? resendToken,
+    bool? otpRequested,
     String? phoneNumber,
   }) {
     return AuthState(
       status: status ?? this.status,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      verificationId: verificationId ?? this.verificationId,
-      resendToken: resendToken ?? this.resendToken,
+      otpRequested: otpRequested ?? this.otpRequested,
       phoneNumber: phoneNumber ?? this.phoneNumber,
     );
   }

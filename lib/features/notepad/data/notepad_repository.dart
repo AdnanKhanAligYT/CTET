@@ -1,20 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/note.dart';
 
 class NotepadRepository {
-  NotepadRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  NotepadRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
-
-  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
-      _firestore.collection('users').doc(uid).collection('notes');
+  final SupabaseClient _client;
 
   Future<List<Note>> fetchNotes(String uid) async {
-    final snapshot = await _collection(uid).get();
-    final notes = snapshot.docs
-        .map((doc) => Note.fromMap(doc.id, doc.data()))
+    final rows = await _client.from('notes').select().eq('user_id', uid);
+    final notes = rows
+        .map((row) => Note.fromMap(row['id'] as String, row))
         .toList();
     notes.sort((a, b) {
       if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
@@ -26,15 +23,27 @@ class NotepadRepository {
   }
 
   Future<String> createNote(String uid, Note note) async {
-    final doc = await _collection(uid).add(note.toMap(isCreate: true));
-    return doc.id;
+    final row = await _client
+        .from('notes')
+        .insert({'user_id': uid, ...note.toMap()})
+        .select()
+        .single();
+    return row['id'] as String;
   }
 
   Future<void> updateNote(String uid, Note note) {
-    return _collection(uid).doc(note.id).set(note.toMap());
+    return _client
+        .from('notes')
+        .update(note.toMap())
+        .eq('user_id', uid)
+        .eq('id', note.id);
   }
 
   Future<void> deleteNote(String uid, String noteId) {
-    return _collection(uid).doc(noteId).delete();
+    return _client
+        .from('notes')
+        .delete()
+        .eq('user_id', uid)
+        .eq('id', noteId);
   }
 }

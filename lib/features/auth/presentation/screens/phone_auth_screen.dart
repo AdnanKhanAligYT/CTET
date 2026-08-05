@@ -42,7 +42,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(authControllerProvider, (previous, next) {
-      final justSent = (previous?.verificationId == null) && next.otpSent;
+      final justSent = (previous?.otpRequested != true) && next.otpSent;
       if (justSent) context.push('/auth/otp');
     });
     final authState = ref.watch(authControllerProvider);

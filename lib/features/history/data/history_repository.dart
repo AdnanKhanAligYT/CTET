@@ -1,22 +1,19 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/attempt.dart';
 
 class HistoryRepository {
-  HistoryRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  HistoryRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
   Future<List<Attempt>> fetchAttempts(String uid) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('attempts')
-        .orderBy('submittedAt', descending: true)
-        .get();
-    return snapshot.docs
-        .map((doc) => Attempt.fromMap(doc.id, doc.data()))
-        .toList();
+    final rows = await _client
+        .from('attempts')
+        .select()
+        .eq('user_id', uid)
+        .order('submitted_at', ascending: false);
+    return rows.map((row) => Attempt.fromMap(row['id'] as String, row)).toList();
   }
 }

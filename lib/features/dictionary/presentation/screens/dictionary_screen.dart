@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/dictionary_word.dart';
@@ -29,10 +29,10 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   }
 
   Future<void> _load() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     final words = await _repository.fetchAllWords();
-    final progress = await _repository.fetchProgress(user.uid);
+    final progress = await _repository.fetchProgress(user.id);
     final due = words
         .where((w) => _spacedRepetition.isDueToday(progress[w.id]))
         .toList();

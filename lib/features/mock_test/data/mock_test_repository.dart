@@ -1,56 +1,47 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/question.dart';
 import '../../../core/models/review_progress.dart';
 
-/// Firestore access for the mock-test feature. Kept as one small
-/// repository (rather than spreading raw Firestore calls through the
-/// controller/screens) so the query shape — global `/questions` filtered
-/// by exam, per-user `/questionProgress` — stays in one place.
+/// Supabase access for the mock-test feature. Kept as one small repository
+/// (rather than spreading raw Postgrest calls through the
+/// controller/screens) so the query shape — global `questions` filtered by
+/// exam, per-user `question_progress` — stays in one place.
 class MockTestRepository {
-  MockTestRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  MockTestRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
-  /// Firestore's `array-contains-any` allows at most 10 values; the exam
-  /// catalog is small enough today that this never matters, but the cap
-  /// is enforced here so a future larger catalog fails loudly instead of
-  /// silently dropping exams.
   Future<List<Question>> fetchQuestionsForExams(List<String> exams) async {
     if (exams.isEmpty) return const [];
-    assert(
-      exams.length <= 10,
-      'Firestore array-contains-any supports at most 10 values',
-    );
-    final snapshot = await _firestore
-        .collection('questions')
-        .where('examTags', arrayContainsAny: exams)
-        .get();
-    return snapshot.docs
-        .map((doc) => Question.fromMap(doc.id, doc.data()))
-        .toList();
+    final rows = await _client
+        .from('questions')
+        .select()
+        .overlaps('exam_tags', exams);
+    return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
   Future<Map<String, ReviewProgress>> fetchProgress(String uid) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('questionProgress')
-        .get();
+    final rows = await _client
+        .from('question_progress')
+        .select()
+        .eq('user_id', uid);
     return {
-      for (final doc in snapshot.docs)
-        doc.id: ReviewProgress.fromMap(doc.id, doc.data()),
+      for (final row in rows)
+        row['question_id'] as String: ReviewProgress.fromMap(
+          row['question_id'] as String,
+          row,
+        ),
     };
   }
 
   Future<void> saveProgress(String uid, ReviewProgress progress) {
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('questionProgress')
-        .doc(progress.itemId)
-        .set(progress.toMap());
+    return _client.from('question_progress').upsert({
+      'user_id': uid,
+      'question_id': progress.itemId,
+      ...progress.toMap(),
+    }, onConflict: 'user_id,question_id');
   }
 
   Future<void> saveAttempt({
@@ -61,12 +52,13 @@ class MockTestRepository {
     required DateTime startedAt,
     required DateTime submittedAt,
   }) {
-    return _firestore.collection('users').doc(uid).collection('attempts').add({
-      'totalQuestions': totalQuestions,
-      'correctCount': correctCount,
-      'wrongCount': wrongCount,
-      'startedAt': Timestamp.fromDate(startedAt),
-      'submittedAt': Timestamp.fromDate(submittedAt),
+    return _client.from('attempts').insert({
+      'user_id': uid,
+      'total_questions': totalQuestions,
+      'correct_count': correctCount,
+      'wrong_count': wrongCount,
+      'started_at': startedAt.toIso8601String(),
+      'submitted_at': submittedAt.toIso8601String(),
     });
   }
 }

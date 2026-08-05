@@ -5,9 +5,14 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <!-- Required on Android 13+ for NotificationService to be allowed to
-         show reminder pushes at all; the runtime prompt still happens via
-         FirebaseMessaging.requestPermission(). -->
+         show reminder notifications at all; the runtime prompt happens via
+         AndroidFlutterLocalNotificationsPlugin.requestNotificationsPermission(). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- The daily/weekly/timetable reminders are scheduled with
+         flutter_local_notifications' exact-alarm mode so they fire at the
+         precise minute rather than being batched by the OS. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="ctet_tet_prep"
         android:name="${applicationName}"

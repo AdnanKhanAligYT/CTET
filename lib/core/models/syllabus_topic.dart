@@ -26,9 +26,9 @@ class SyllabusTopic {
       exam: map['exam'] as String? ?? '',
       subject: map['subject'] as String? ?? '',
       unit: map['unit'] as String? ?? '',
-      topicName: map['topicName'] as String? ?? '',
+      topicName: map['topic_name'] as String? ?? '',
       order: (map['order'] as num?)?.toInt() ?? 0,
-      estimatedHours: (map['estimatedHours'] as num?)?.toDouble(),
+      estimatedHours: (map['estimated_hours'] as num?)?.toDouble(),
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,11 +60,11 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     final allQuestions = await _repository.fetchQuestionsForExams(exams);
-    final progress = await _repository.fetchProgress(user.uid);
+    final progress = await _repository.fetchProgress(user.id);
 
     final due =
         allQuestions
@@ -84,7 +84,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
   Future<void> _selectOption(int index) async {
     if (_locked) return;
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     final question = _currentQuestion;
@@ -106,7 +106,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
       wasCorrect: wasCorrect,
     );
     _progress = {..._progress, question.id: updatedProgress};
-    await _repository.saveProgress(user.uid, updatedProgress);
+    await _repository.saveProgress(user.id, updatedProgress);
   }
 
   void _next() {
@@ -122,10 +122,10 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
   }
 
   Future<void> _finish() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       await _repository.saveAttempt(
-        uid: user.uid,
+        uid: user.id,
         totalQuestions: _dueQuestions.length,
         correctCount: _correctCount,
         wrongCount: _wrongCount,

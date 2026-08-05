@@ -1,11 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-/// Mirrors `/users/{uid}/timetable/{id}` — one manually-added study block
-/// on the student's personal weekly schedule. `dayOfWeek` follows
-/// `DateTime.weekday` (1 = Monday ... 7 = Sunday) so it sorts naturally
-/// against real dates later if needed. Times are stored as minutes since
-/// midnight (not a `TimeOfDay`, which isn't Firestore-serializable) so
-/// blocks sort and format consistently.
+/// Mirrors a `timetable_blocks` row (see `supabase/schema.sql`) — one
+/// manually-added study block on the student's personal weekly schedule.
+/// `dayOfWeek` follows `DateTime.weekday` (1 = Monday ... 7 = Sunday) so it
+/// sorts naturally against real dates later if needed. Times are stored as
+/// minutes since midnight (not a `TimeOfDay`, which isn't directly
+/// serializable) so blocks sort and format consistently.
 class TimetableBlock {
   const TimetableBlock({
     required this.id,
@@ -26,9 +24,9 @@ class TimetableBlock {
   factory TimetableBlock.fromMap(String id, Map<String, dynamic> map) {
     return TimetableBlock(
       id: id,
-      dayOfWeek: (map['dayOfWeek'] as num?)?.toInt() ?? 1,
-      startMinutes: (map['startMinutes'] as num?)?.toInt() ?? 0,
-      endMinutes: (map['endMinutes'] as num?)?.toInt() ?? 0,
+      dayOfWeek: (map['day_of_week'] as num?)?.toInt() ?? 1,
+      startMinutes: (map['start_minutes'] as num?)?.toInt() ?? 0,
+      endMinutes: (map['end_minutes'] as num?)?.toInt() ?? 0,
       subject: map['subject'] as String? ?? '',
       done: map['done'] as bool? ?? false,
     );
@@ -36,12 +34,12 @@ class TimetableBlock {
 
   Map<String, dynamic> toMap() {
     return {
-      'dayOfWeek': dayOfWeek,
-      'startMinutes': startMinutes,
-      'endMinutes': endMinutes,
+      'day_of_week': dayOfWeek,
+      'start_minutes': startMinutes,
+      'end_minutes': endMinutes,
       'subject': subject,
       'done': done,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updated_at': DateTime.now().toIso8601String(),
     };
   }
 

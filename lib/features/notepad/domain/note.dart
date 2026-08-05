@@ -1,6 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-/// Mirrors `/users/{uid}/notes/{id}`.
+/// Mirrors a `notes` row (see `supabase/schema.sql`).
 class Note {
   const Note({
     required this.id,
@@ -22,19 +20,19 @@ class Note {
       title: map['title'] as String? ?? '',
       body: map['body'] as String? ?? '',
       pinned: map['pinned'] as bool? ?? false,
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
+          : null,
     );
   }
 
-  Map<String, dynamic> toMap({bool isCreate = false}) {
-    final map = <String, dynamic>{
+  Map<String, dynamic> toMap() {
+    return {
       'title': title,
       'body': body,
       'pinned': pinned,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updated_at': DateTime.now().toIso8601String(),
     };
-    if (isCreate) map['createdAt'] = FieldValue.serverTimestamp();
-    return map;
   }
 
   Note copyWith({String? title, String? body, bool? pinned}) {

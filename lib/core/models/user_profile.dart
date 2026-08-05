@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
 /// How the student's display name was originally populated. Kept so the
@@ -69,9 +68,9 @@ String _sourceToString(DisplayNameSource source) {
   }
 }
 
-/// Mirrors the `/users/{uid}` Firestore document described in the project
-/// plan — the fields intentionally match the reference Edit Profile screen
-/// (Designation, Institution, City, Exams, Email, Phone, ...).
+/// Mirrors a `public.profiles` row (see `supabase/schema.sql`) — the fields
+/// intentionally match the reference Edit Profile screen (Designation,
+/// Institution, City, Exams, Email, Phone, ...).
 class UserProfile {
   const UserProfile({
     required this.uid,
@@ -112,51 +111,53 @@ class UserProfile {
   factory UserProfile.fromMap(String uid, Map<String, dynamic> map) {
     return UserProfile(
       uid: uid,
-      displayName: map['displayName'] as String? ?? '',
-      displayNameSource: _sourceFromString(map['displayNameSource'] as String?),
+      displayName: map['display_name'] as String? ?? '',
+      displayNameSource: _sourceFromString(
+        map['display_name_source'] as String?,
+      ),
       email: map['email'] as String?,
       phone: map['phone'] as String?,
-      photoURL: map['photoURL'] as String?,
-      aboutYou: map['aboutYou'] as String? ?? '',
-      accountType: map['accountType'] as String? ?? 'free',
+      photoURL: map['photo_url'] as String?,
+      aboutYou: map['about_you'] as String? ?? '',
+      accountType: map['account_type'] as String? ?? 'free',
       designation: map['designation'] as String? ?? '',
       institution: map['institution'] as String? ?? '',
       city: map['city'] as String? ?? '',
-      cityAutoFilled: map['cityAutoFilled'] as bool? ?? false,
+      cityAutoFilled: map['city_auto_filled'] as bool? ?? false,
       exams:
           (map['exams'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
-      passwordSet: map['passwordSet'] as bool? ?? false,
+      passwordSet: map['password_set'] as bool? ?? false,
       language: map['language'] as String? ?? 'hi',
       themePreference: _themePreferenceFromString(
-        map['themePreference'] as String?,
+        map['theme_preference'] as String?,
       ),
     );
   }
 
-  Map<String, dynamic> toMap({bool isCreate = false}) {
-    final map = <String, dynamic>{
-      'displayName': displayName,
-      'displayNameSource': _sourceToString(displayNameSource),
+  /// Row payload for an upsert into `public.profiles`. `id` is included so
+  /// callers can `upsert` directly without juggling a separate primary key
+  /// parameter.
+  Map<String, dynamic> toMap() {
+    return {
+      'id': uid,
+      'display_name': displayName,
+      'display_name_source': _sourceToString(displayNameSource),
       'email': email,
       'phone': phone,
-      'photoURL': photoURL,
-      'aboutYou': aboutYou,
-      'accountType': accountType,
+      'photo_url': photoURL,
+      'about_you': aboutYou,
+      'account_type': accountType,
       'designation': designation,
       'institution': institution,
       'city': city,
-      'cityAutoFilled': cityAutoFilled,
+      'city_auto_filled': cityAutoFilled,
       'exams': exams,
-      'passwordSet': passwordSet,
+      'password_set': passwordSet,
       'language': language,
-      'themePreference': themePreference.toStorageString(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'theme_preference': themePreference.toStorageString(),
+      'updated_at': DateTime.now().toIso8601String(),
     };
-    if (isCreate) {
-      map['createdAt'] = FieldValue.serverTimestamp();
-    }
-    return map;
   }
 
   UserProfile copyWith({

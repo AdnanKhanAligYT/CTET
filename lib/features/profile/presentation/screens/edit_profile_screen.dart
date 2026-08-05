@@ -1,9 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/exam_catalog.dart';
 import '../../../../core/models/user_profile.dart';
@@ -53,12 +53,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } catch (_) {
       // Fall through to the default below.
     }
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     profile ??= UserProfile(
-      uid: user?.uid ?? '',
+      uid: user?.id ?? '',
       email: user?.email,
-      phone: user?.phoneNumber,
-      displayName: user?.displayName ?? '',
+      phone: user?.phone,
+      displayName: (user?.userMetadata?['display_name'] as String?) ?? '',
       designation: 'Student',
     );
     if (!mounted) return;
@@ -265,7 +265,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               value: profile.email ?? 'Not linked',
               trailingLabel:
                   profile.email != null &&
-                      FirebaseAuth.instance.currentUser?.emailVerified == false
+                      Supabase.instance.client.auth.currentUser
+                              ?.emailConfirmedAt ==
+                          null
                   ? 'Unverified'
                   : null,
             ),
@@ -376,7 +378,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _showSetPasswordDialog() async {
     final emailController = TextEditingController(
-      text: FirebaseAuth.instance.currentUser?.email ?? '',
+      text: Supabase.instance.client.auth.currentUser?.email ?? '',
     );
     final passwordController = TextEditingController();
     await showDialog<void>(

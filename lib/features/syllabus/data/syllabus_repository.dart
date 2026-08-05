@@ -1,51 +1,52 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/syllabus_topic.dart';
 import '../domain/topic_status.dart';
 
 class SyllabusRepository {
-  SyllabusRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  SyllabusRepository({SupabaseClient? client})
+    : _client = client ?? Supabase.instance.client;
 
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
   Future<List<SyllabusTopic>> fetchTopicsForExams(List<String> exams) async {
     if (exams.isEmpty) return const [];
-    assert(exams.length <= 10, 'Firestore whereIn supports at most 10 values');
-    final snapshot = await _firestore
-        .collection('syllabusTopics')
-        .where('exam', whereIn: exams)
-        .get();
+    final rows = await _client
+        .from('syllabus_topics')
+        .select()
+        .inFilter('exam', exams);
     final topics =
-        snapshot.docs
-            .map((doc) => SyllabusTopic.fromMap(doc.id, doc.data()))
+        rows
+            .map((row) => SyllabusTopic.fromMap(row['id'] as String, row))
             .toList()
           ..sort((a, b) => a.order.compareTo(b.order));
     return topics;
   }
 
   Future<Map<String, TopicStatus>> fetchProgress(String uid) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('syllabusProgress')
-        .get();
+    final rows = await _client
+        .from('syllabus_progress')
+        .select()
+        .eq('user_id', uid);
     return {
-      for (final doc in snapshot.docs)
-        doc.id: topicStatusFromString(doc.data()['status'] as String?),
+      for (final row in rows)
+        row['topic_id'] as String: topicStatusFromString(
+          row['status'] as String?,
+        ),
     };
   }
 
   Future<void> setStatus(String uid, String topicId, TopicStatus status) {
-    final data = <String, dynamic>{'status': status.toStorageString()};
+    final data = <String, dynamic>{
+      'user_id': uid,
+      'topic_id': topicId,
+      'status': status.toStorageString(),
+    };
     if (status == TopicStatus.done) {
-      data['completedAt'] = FieldValue.serverTimestamp();
+      data['completed_at'] = DateTime.now().toIso8601String();
     }
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('syllabusProgress')
-        .doc(topicId)
-        .set(data, SetOptions(merge: true));
+    return _client
+        .from('syllabus_progress')
+        .upsert(data, onConflict: 'user_id,topic_id');
   }
 }
