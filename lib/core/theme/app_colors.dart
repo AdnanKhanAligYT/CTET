@@ -38,6 +38,7 @@ class AppColors {
   /// Flat colors for the dashboard's study-tool quick-link tiles — same
   /// "one flat color per icon" idea as the Edit Profile options above.
   static const tileMockTest = Color(0xFF2F6FED);
+  static const tilePyq = Color(0xFF1E9E8C);
   static const tileSyllabus = Color(0xFFE8873C);
   static const tileDictionary = Color(0xFF12977A);
   static const tileTimetable = Color(0xFF4C3FCF);
