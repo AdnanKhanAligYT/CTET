@@ -11,11 +11,19 @@ import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
 import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
+import '../../features/mock_test/presentation/screens/exam_list_screen.dart';
+import '../../features/mock_test/presentation/screens/named_test_result_screen.dart';
+import '../../features/mock_test/presentation/screens/named_test_screen.dart';
+import '../../features/mock_test/presentation/screens/paper_list_screen.dart';
 import '../../features/mock_test/presentation/screens/take_test_screen.dart';
+import '../../features/mock_test/presentation/screens/test_set_list_screen.dart';
 import '../../features/notepad/presentation/screens/notepad_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/syllabus/presentation/screens/syllabus_screen.dart';
 import '../../features/timetable/presentation/screens/timetable_screen.dart';
+import '../models/exam_node.dart';
+import '../models/test_attempt.dart';
+import '../models/test_set.dart';
 import 'go_router_refresh_stream.dart';
 
 // Only '/welcome' is bounced away from once logged in — this exists purely
@@ -32,7 +40,13 @@ const _bounceWhenLoggedIn = ['/welcome'];
 const _requiresAuth = [
   '/',
   '/profile/edit',
+  '/mock-test',
   '/mock-test/take',
+  '/mock-test/papers',
+  '/mock-test/sets',
+  '/mock-test/named',
+  '/mock-test/named/result',
+  '/pyq',
   '/syllabus',
   '/dictionary',
   '/timetable',
@@ -92,6 +106,43 @@ final appRouter = GoRouter(
         isFirstTimeSetup: state.uri.queryParameters['firstTime'] == 'true',
       ),
     ),
+    // ── Mock Test / Previous Year Questions catalog ──
+    // Both tiles land on the same ExamListScreen/PaperListScreen/
+    // TestSetListScreen chain, distinguished only by `type`.
+    GoRoute(
+      path: '/mock-test',
+      builder: (context, state) =>
+          const ExamListScreen(type: TestSetType.mockTest),
+    ),
+    GoRoute(
+      path: '/pyq',
+      builder: (context, state) => const ExamListScreen(type: TestSetType.pyq),
+    ),
+    GoRoute(
+      path: '/mock-test/papers',
+      builder: (context, state) => PaperListScreen(
+        parent: state.extra as ExamNode,
+        type: TestSetTypeX.fromValue(state.uri.queryParameters['type']),
+      ),
+    ),
+    GoRoute(
+      path: '/mock-test/sets',
+      builder: (context, state) => TestSetListScreen(
+        paper: state.extra as ExamNode,
+        type: TestSetTypeX.fromValue(state.uri.queryParameters['type']),
+      ),
+    ),
+    GoRoute(
+      path: '/mock-test/named',
+      builder: (context, state) =>
+          NamedTestScreen(args: state.extra as NamedTestArgs),
+    ),
+    GoRoute(
+      path: '/mock-test/named/result',
+      builder: (context, state) =>
+          NamedTestResultScreen(attempt: state.extra as TestAttempt),
+    ),
+    // ── Daily due-today practice (spaced repetition, unchanged) ──
     GoRoute(
       path: '/mock-test/take',
       builder: (context, state) => const TakeTestScreen(),
