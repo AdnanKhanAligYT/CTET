@@ -54,11 +54,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       // Fall through to the default below.
     }
     final user = Supabase.instance.client.auth.currentUser;
+    final metadata = user?.userMetadata;
+    // Email/phone signups store the confirmed name under `display_name`;
+    // Google sign-in (signInWithIdToken) never gets that call, so it only
+    // ever has Google's own `full_name`/`name` + `avatar_url`/`picture`
+    // claims — fall back through both so a first-time Google student still
+    // lands here with their real name and photo pre-filled.
+    final googleName = metadata?['full_name'] as String? ?? metadata?['name'] as String?;
+    final googlePhoto = metadata?['avatar_url'] as String? ?? metadata?['picture'] as String?;
     profile ??= UserProfile(
       uid: user?.id ?? '',
       email: user?.email,
       phone: user?.phone,
-      displayName: (user?.userMetadata?['display_name'] as String?) ?? '',
+      displayName: (metadata?['display_name'] as String?) ?? googleName ?? '',
+      photoURL: googlePhoto,
       designation: 'Student',
     );
     if (!mounted) return;
@@ -80,6 +89,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _institutionController.dispose();
     _cityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _resendVerificationEmail() async {
+    final sent = await ref
+        .read(authControllerProvider.notifier)
+        .resendEmailVerification();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sent
+              ? 'Verification email sent — check your inbox.'
+              : 'Could not send verification email.',
+        ),
+      ),
+    );
   }
 
   Future<void> _autoFillCity() async {
@@ -268,7 +293,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       Supabase.instance.client.auth.currentUser
                               ?.emailConfirmedAt ==
                           null
-                  ? 'Unverified'
+                  ? 'Resend verification'
+                  : null,
+              onTrailingTap:
+                  profile.email != null &&
+                      Supabase.instance.client.auth.currentUser
+                              ?.emailConfirmedAt ==
+                          null
+                  ? _resendVerificationEmail
                   : null,
             ),
             const SizedBox(height: 16),
@@ -463,11 +495,13 @@ class _ReadOnlyRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.trailingLabel,
+    this.onTrailingTap,
   });
 
   final String label;
   final String value;
   final String? trailingLabel;
+  final VoidCallback? onTrailingTap;
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +517,10 @@ class _ReadOnlyRow extends StatelessWidget {
             ],
           ),
         ),
-        if (trailingLabel != null) Text(trailingLabel!),
+        if (trailingLabel != null)
+          onTrailingTap != null
+              ? TextButton(onPressed: onTrailingTap, child: Text(trailingLabel!))
+              : Text(trailingLabel!),
       ],
     );
   }

@@ -58,7 +58,26 @@ you're picking this repo up mid-migration.
    npx supabase functions deploy delete-account
    ```
    No billing needed — Edge Functions have a generous free tier.
-7. **Seed some content to test with** — Mock Test, Syllabus, and
+7. **Set up Google Sign-In** ("Continue with Google" on the Welcome
+   screen — a native account picker, not a browser popup):
+   1. Google Cloud Console (console.cloud.google.com) → APIs & Services →
+      Credentials → **Create Credentials → OAuth client ID**.
+   2. Create a **Web application** client (yes, even though this is an
+      Android app — Supabase's Google provider and `google_sign_in`'s
+      `serverClientId` both need this one, not an Android-type client).
+      Copy its Client ID.
+   3. Paste that Client ID into `_googleServerClientId` in
+      `lib/features/auth/application/auth_controller.dart` (currently
+      `REPLACE_ME.apps.googleusercontent.com`).
+   4. Supabase Dashboard → Authentication → Sign In / Providers → Google →
+      enable it, paste the same Client ID into "Client IDs".
+   5. Create a second OAuth client, type **Android**, with this app's
+      package name (`com.adnankhanaligyt.ctet_tet_prep`) and its SHA-1
+      fingerprint (get yours with `cd android && ./gradlew signingReport`,
+      look for the `debug` variant's SHA1 — you'll need to redo this with
+      your release keystore's SHA-1 once you have one for Play Store
+      builds).
+8. **Seed some content to test with** — Mock Test, Syllabus, and
    Dictionary are all empty until you add rows yourself (Supabase
    Dashboard → Table Editor → pick the table → Insert row, or paste SQL
    `insert into ...` statements into the SQL Editor).

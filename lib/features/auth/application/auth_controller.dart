@@ -1,7 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/auth_state.dart';
+
+// Google Cloud Console -> APIs & Services -> Credentials -> "Web client"
+// OAuth Client ID (NOT the Android client — google_sign_in needs the web
+// one as `serverClientId` so the id token it returns is one Supabase's
+// Google provider will accept). See README "Google Sign-In setup".
+const _googleServerClientId = 'REPLACE_ME.apps.googleusercontent.com';
 
 final _client = Supabase.instance.client;
 
@@ -36,6 +43,11 @@ class AuthController extends Notifier<AuthState> {
     required String password,
   }) => _run(() async {
     await _auth.signUp(email: email.trim(), password: password);
+    // Non-blocking by design: the student is already signed in (Confirm
+    // email is off in Supabase so signup never waits on this) — this just
+    // gets a verification link into their inbox so the "Unverified" badge
+    // in Edit Profile can eventually clear.
+    await _auth.resend(type: OtpType.signup, email: email.trim());
   });
 
   Future<bool> signInWithEmail({
@@ -48,6 +60,50 @@ class AuthController extends Notifier<AuthState> {
   Future<bool> sendPasswordResetEmail(String email) => _run(() async {
     await _auth.resetPasswordForEmail(email.trim());
   });
+
+  Future<bool> resendEmailVerification() => _run(() async {
+    final email = _auth.currentUser?.email;
+    if (email == null) throw StateError('No email on this account.');
+    await _auth.resend(type: OtpType.signup, email: email);
+  });
+
+  /// Native "choose a Google account on this device" sign-in — shows the
+  /// system account picker (via google_sign_in), then hands the resulting
+  /// ID token to Supabase rather than opening a browser-based OAuth flow.
+  Future<bool> signInWithGoogle() async {
+    state = state.copyWith(status: AuthStatus.loading, clearError: true);
+    try {
+      final googleUser = await GoogleSignIn(
+        serverClientId: _googleServerClientId,
+      ).signIn();
+      if (googleUser == null) {
+        // Student dismissed the account picker — not an error.
+        state = state.copyWith(status: AuthStatus.idle);
+        return false;
+      }
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        throw StateError('Could not get a Google ID token.');
+      }
+      await _auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      state = state.copyWith(status: AuthStatus.idle);
+      return true;
+    } on AuthException catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: _friendlyMessage(e),
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: '$e');
+      return false;
+    }
+  }
 
   /// Sends a 6-digit SMS code via Supabase Phone Auth. Works for both a
   /// brand-new number and a returning student's number — Supabase creates
