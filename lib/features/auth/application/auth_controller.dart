@@ -8,7 +8,8 @@ import '../domain/auth_state.dart';
 // OAuth Client ID (NOT the Android client — google_sign_in needs the web
 // one as `serverClientId` so the id token it returns is one Supabase's
 // Google provider will accept). See README "Google Sign-In setup".
-const _googleServerClientId = 'REPLACE_ME.apps.googleusercontent.com';
+const _googleServerClientId =
+    '992082039986-4jio0s9uu2n3god1l32pdnp2mduuankk.apps.googleusercontent.com';
 
 final _client = Supabase.instance.client;
 
