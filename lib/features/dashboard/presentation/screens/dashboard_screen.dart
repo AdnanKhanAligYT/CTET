@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/models/test_set.dart';
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
 
-/// Home screen: profile summary up top, the two Phase 2 study tools
-/// (Mock Test, Syllabus) as quick-link tiles, and a banner ad at the
-/// bottom — see `core/services/ad_service.dart` for how the ad units are
-/// wired (test IDs until a real AdMob account is linked).
+/// Home screen: profile summary up top, the study-tool quick-link tiles
+/// (Mock Test, Previous Year Questions, Syllabus, ...) — see
+/// `core/services/ad_service.dart` for how the banner ad unit is wired
+/// (test IDs until a real AdMob account is linked).
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key, required this.profile});
 
@@ -72,8 +73,16 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.quiz_outlined,
                     color: AppColors.tileMockTest,
                     title: 'Mock Test',
-                    subtitle: 'Today\'s due questions, mixed order',
-                    onTap: () => context.push('/mock-test/take'),
+                    subtitle: 'Exam chuno, phir test',
+                    onTap: () => context.push('/mock-test'),
+                  ),
+                  const SizedBox(height: 12),
+                  _QuickLinkTile(
+                    icon: Icons.history_edu_outlined,
+                    color: AppColors.tilePyq,
+                    title: 'Previous Year Questions',
+                    subtitle: 'Exam chuno, phir purane papers',
+                    onTap: () => context.push('/pyq'),
                   ),
                   const SizedBox(height: 12),
                   _QuickLinkTile(
