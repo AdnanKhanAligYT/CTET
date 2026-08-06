@@ -11,8 +11,9 @@ class HistoryRepository {
   Future<List<Attempt>> fetchAttempts(String uid) async {
     final rows = await _client
         .from('attempts')
-        .select()
+        .select('*, test_sets(name)')
         .eq('user_id', uid)
+        .eq('status', 'completed')
         .order('submitted_at', ascending: false);
     return rows.map((row) => Attempt.fromMap(row['id'] as String, row)).toList();
   }
