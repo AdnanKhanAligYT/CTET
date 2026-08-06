@@ -12,6 +12,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications' exact-alarm scheduling.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -19,8 +21,6 @@ android {
         applicationId = "com.adnankhanaligyt.ctet_tet_prep"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // minSdk 23 (not the Flutter default) because Firebase Auth's phone
-        // number verification flow requires it.
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -44,4 +44,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
