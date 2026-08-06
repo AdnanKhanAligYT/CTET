@@ -16,6 +16,12 @@ linking Google Cloud billing even on the free tier — Supabase's free tier
 needs no card at all. See "What changed from Firebase" at the bottom if
 you're picking this repo up mid-migration.
 
+Firebase makes one narrow return: **Mobile OTP** uses Firebase Phone Auth
+(free, DLT-registration-free) purely to verify the phone number, bridged
+into a real Supabase account via `supabase/functions/firebase-phone-bridge`
+— see setup step 5 below. Everything else (data, email login, Google
+login, storage) stays on Supabase.
+
 ## One-time setup (you need to do this — I don't have access to your
 ## Supabase account)
 
@@ -39,16 +45,31 @@ you're picking this repo up mid-migration.
    `lib/core/supabase_config.dart` (currently `REPLACE_ME` placeholders).
    Both are safe to ship in the app — access is controlled by the Row
    Level Security policies from step 2, not by keeping these secret.
-5. **Set up an SMS provider for Phone OTP.** Unlike Firebase, Supabase
-   doesn't send SMS itself — Dashboard → Authentication → Providers →
-   Phone → pick a provider (Twilio, MessageBird, Vonage, or similar) and
-   enter its credentials. Every provider needs its own account and
-   (unlike Supabase itself) does typically require a card, since sending
-   an SMS costs a small amount per message — this is unavoidable for real
-   SMS delivery, not specific to Supabase. If you want to test the rest of
-   the app first without paying for SMS, you can skip this step for now
-   and just use Email signup — Phone signup will error until a provider is
-   configured.
+5. **Set up Mobile OTP (Firebase bridge).** Supabase's own phone provider
+   needs a paid SMS vendor (Twilio etc.) *and* separately registering with
+   India's mandatory DLT system yourself — a lot for one person. Instead,
+   this app verifies the phone number with **Firebase Phone Auth** (free;
+   Google already handles DLT registration) and bridges that into a real
+   Supabase account with an Edge Function. Skip this step for now if you
+   just want to test with Email/Google first — Mobile Number sign-in will
+   error until it's done.
+   1. Create a Firebase project at https://console.firebase.google.com
+      (separate from Supabase — only used for phone verification).
+   2. Authentication → Sign-in method → enable **Phone**.
+   3. Project Settings → Your apps → add an **Android app** with package
+      name `com.adnankhanaligyt.ctet_tet_prep`. Add your debug keystore's
+      SHA-1 (`cd android && ./gradlew signingReport`) — Firebase Phone
+      Auth needs it for silent verification. Download the
+      **`google-services.json`** it gives you and put it at
+      `android/app/google-services.json` (gitignored — project-specific).
+   4. Project Settings → General → under "Your project" copy the
+      **Project ID** (not the project name — the short lowercase-with-
+      hyphens ID).
+   5. Deploy the bridge function and give it that Project ID as a secret:
+      ```
+      npx supabase secrets set FIREBASE_PROJECT_ID=<your-firebase-project-id>
+      npx supabase functions deploy firebase-phone-bridge
+      ```
 6. **Deploy the account-deletion function** (Play Store requires an
    in-app way to delete your account, and only a backend can actually
    delete an `auth.users` row — see `supabase/functions/delete-account`):

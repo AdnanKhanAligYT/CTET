@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase config for the Phone Auth bridge (see README "Set up Mobile
+# OTP") — project-specific, regenerate from your own Firebase Console
+# rather than committing it.
+/android/app/google-services.json

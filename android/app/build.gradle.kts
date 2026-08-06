@@ -4,6 +4,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Only for Firebase Phone Auth — the google-services plugin hard-fails the
+// build if google-services.json is missing, so it's applied conditionally
+// rather than from the `plugins {}` block above. Until you've done the
+// Firebase setup in README ("Set up Mobile OTP"), the app still builds and
+// runs fine — Mobile Number sign-in just won't work yet.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.adnankhanaligyt.ctet_tet_prep"
     compileSdk = flutter.compileSdkVersion

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
@@ -29,6 +32,12 @@ final authControllerProvider = NotifierProvider<AuthController, AuthState>(
 /// tell apart.
 class AuthController extends Notifier<AuthState> {
   GoTrueClient get _auth => _client.auth;
+
+  // Firebase Phone Auth session plumbing — not surfaced in AuthState since
+  // no screen needs to read it directly, just pass it back into
+  // confirmOtp/resend.
+  String? _firebaseVerificationId;
+  int? _firebaseResendToken;
 
   @override
   AuthState build() => const AuthState();
@@ -106,10 +115,13 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  /// Sends a 6-digit SMS code via Supabase Phone Auth. Works for both a
-  /// brand-new number and a returning student's number — Supabase creates
-  /// the account transparently on first verify, same as the old Firebase
-  /// Phone Auth behaviour.
+  /// Sends a 6-digit SMS code via **Firebase** Phone Auth, not Supabase —
+  /// Supabase's own phone provider needs a paid SMS provider (Twilio etc.)
+  /// plus Indian DLT registration; Firebase's is free and Google handles
+  /// DLT itself. Firebase only verifies the number here; `confirmOtp`
+  /// below hands that verified number to the `firebase-phone-bridge` Edge
+  /// Function to actually create/sign in the real Supabase account — see
+  /// README "Set up Mobile OTP" for the full picture.
   Future<void> startPhoneVerification({required String phoneNumber}) async {
     state = state.copyWith(
       status: AuthStatus.loading,
@@ -118,23 +130,84 @@ class AuthController extends Notifier<AuthState> {
       otpRequested: false,
     );
     try {
-      await _auth.signInWithOtp(phone: phoneNumber);
-      state = state.copyWith(status: AuthStatus.idle, otpRequested: true);
-    } on AuthException catch (e) {
+      await fb.FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        forceResendingToken: _firebaseResendToken,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (credential) async {
+          // Some Android devices auto-fill the code before the student
+          // types anything — finish sign-in right away when that happens.
+          try {
+            await _completeFirebasePhoneSignIn(credential);
+          } catch (e) {
+            state = state.copyWith(status: AuthStatus.error, errorMessage: '$e');
+          }
+        },
+        verificationFailed: (e) {
+          state = state.copyWith(
+            status: AuthStatus.error,
+            errorMessage: e.message ?? 'Could not send OTP.',
+          );
+        },
+        codeSent: (verificationId, resendToken) {
+          _firebaseVerificationId = verificationId;
+          _firebaseResendToken = resendToken;
+          state = state.copyWith(status: AuthStatus.idle, otpRequested: true);
+        },
+        codeAutoRetrievalTimeout: (verificationId) {
+          _firebaseVerificationId = verificationId;
+        },
+      );
+    } on fb.FirebaseAuthException catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.message,
+        errorMessage: e.message ?? 'Could not send OTP.',
       );
     }
   }
 
   Future<bool> confirmOtp(String smsCode) => _run(() async {
-    final phone = state.phoneNumber;
-    if (phone == null) {
+    final verificationId = _firebaseVerificationId;
+    if (verificationId == null) {
       throw StateError('No OTP request in progress.');
     }
-    await _auth.verifyOTP(phone: phone, token: smsCode, type: OtpType.sms);
+    final credential = fb.PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    await _completeFirebasePhoneSignIn(credential);
   });
+
+  /// Firebase confirms the code and hands back a verified Firebase user;
+  /// its ID token is the proof-of-verification the bridge function checks
+  /// before creating/signing in the matching Supabase account. The
+  /// Firebase session itself is never needed again after this, so it's
+  /// discarded immediately — Supabase's session is the one the rest of
+  /// the app runs on.
+  Future<void> _completeFirebasePhoneSignIn(
+    fb.PhoneAuthCredential credential,
+  ) async {
+    final firebaseResult = await fb.FirebaseAuth.instance.signInWithCredential(
+      credential,
+    );
+    final idToken = await firebaseResult.user?.getIdToken();
+    if (idToken == null) {
+      throw StateError('Could not verify the code with Firebase.');
+    }
+    final response = await _client.functions.invoke(
+      'firebase-phone-bridge',
+      body: {'idToken': idToken},
+    );
+    final data = response.data as Map<String, dynamic>;
+    if (data['error'] != null) {
+      throw StateError(data['error'] as String);
+    }
+    await _auth.signInWithPassword(
+      phone: data['phone'] as String,
+      password: data['password'] as String,
+    );
+    unawaited(fb.FirebaseAuth.instance.signOut());
+  }
 
   /// Lets a phone-only account add an email+password sign-in method (the
   /// "Set Password" option in Edit Profile), so both login paths work on

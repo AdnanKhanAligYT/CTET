@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +19,16 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
   );
+  try {
+    // Only used for the Mobile OTP bridge (see
+    // core/services/firebase_phone_auth_service.dart) — everything else in
+    // the app is Supabase. Fails silently until google-services.json is
+    // added (see README "Set up Mobile OTP"); Mobile Number sign-in just
+    // won't work until then, nothing else is affected.
+    await Firebase.initializeApp();
+  } catch (_) {
+    // ignore
+  }
   // Ads and notification setup never block startup: neither call is
   // awaited, so a slow/unreachable network only delays those features,
   // not the whole app.
