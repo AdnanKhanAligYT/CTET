@@ -172,3 +172,119 @@ create table public.attempts (
 alter table public.attempts enable row level security;
 create policy "attempts: own rows" on public.attempts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- Structured Mock Test / Previous Year Questions catalog
+--
+-- Replaces "tap Mock Test, get today's due questions mixed together" with
+-- a browsable exam -> paper -> named test hierarchy. Admin-managed (read
+-- only from the app), same pattern as questions/syllabus_topics/
+-- dictionary_words above — add/edit/remove rows from the reference PHP
+-- app's Termux admin tool, which holds the Supabase service_role key and
+-- so bypasses RLS entirely.
+-- ============================================================
+create table public.exams (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  -- null = top-level exam (e.g. "CTET"); non-null = a paper under it
+  -- (e.g. "CTET Paper 1"). Only two levels deep are supported by the app.
+  parent_exam_id uuid references public.exams (id) on delete cascade,
+  sort_order int not null default 0,
+  active boolean not null default true
+);
+
+create index exams_parent_idx on public.exams (parent_exam_id);
+
+alter table public.exams enable row level security;
+create policy "exams: read for signed-in students" on public.exams
+  for select using (auth.role() = 'authenticated');
+
+create table public.test_sets (
+  id uuid primary key default gen_random_uuid(),
+  -- Always a paper-level exam row (parent_exam_id is not null on it).
+  exam_id uuid not null references public.exams (id) on delete cascade,
+  type text not null check (type in ('mock_test', 'pyq')),
+  name text not null,
+  -- Ordered subject tabs the test screen walks through — by default the
+  -- next subject only becomes reachable once every question in the
+  -- current one is answered; manually tapping a tab always works.
+  subjects text[] not null default '{}',
+  time_limit_minutes int,
+  -- Previous Year Questions only; null for mock_test sets.
+  year int,
+  sort_order int not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index test_sets_exam_type_idx on public.test_sets (exam_id, type);
+
+alter table public.test_sets enable row level security;
+create policy "test_sets: read for signed-in students" on public.test_sets
+  for select using (auth.role() = 'authenticated');
+
+create table public.test_set_questions (
+  set_id uuid not null references public.test_sets (id) on delete cascade,
+  question_id uuid not null references public.questions (id) on delete cascade,
+  -- Explicit, stable ordering (not shuffled) — a resumed attempt's
+  -- "current question in this subject" is derived by walking this order
+  -- and skipping already-answered questions, so the order can't drift
+  -- between sessions the way a re-shuffle-on-load would.
+  position int not null default 0,
+  primary key (set_id, question_id)
+);
+
+alter table public.test_set_questions enable row level security;
+create policy "test_set_questions: read for signed-in students" on public.test_set_questions
+  for select using (auth.role() = 'authenticated');
+
+-- ── Resumable, unlimited-retake attempts on a named test set ──
+-- (daily due-today practice via take_test.php-equivalent keeps using the
+-- original columns above with test_set_id left null.)
+alter table public.attempts
+  add column test_set_id uuid references public.test_sets (id) on delete set null,
+  add column status text not null default 'completed'
+    check (status in ('in_progress', 'completed', 'abandoned')),
+  add column current_subject_index int not null default 0,
+  add column answers jsonb not null default '{}'::jsonb,
+  add column elapsed_seconds int not null default 0,
+  add column rank int,
+  add column participants_count int;
+
+create index attempts_test_set_id_idx on public.attempts (test_set_id);
+
+-- At most one in-progress attempt per student per test set — "Naya Start
+-- karo" must abandon the existing in_progress row first (app-enforced),
+-- this index just guarantees it can never be two.
+create unique index attempts_in_progress_unique
+  on public.attempts (user_id, test_set_id)
+  where status = 'in_progress';
+
+-- Ranks a just-finished attempt against every other *completed* attempt
+-- on the same test_set — score first, faster time as the tie-break.
+-- SECURITY DEFINER so it can see every student's attempts for this one
+-- aggregate computation despite attempts' RLS being "own rows only" for
+-- everything else; it returns nothing but the rank + participant count,
+-- never another student's individual score.
+create or replace function public.compute_test_set_rank(
+  p_test_set_id uuid,
+  p_correct_count int,
+  p_elapsed_seconds int
+) returns table(rank int, participants int)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    (select count(*) + 1 from public.attempts a
+       where a.test_set_id = p_test_set_id
+         and a.status = 'completed'
+         and (a.correct_count > p_correct_count
+              or (a.correct_count = p_correct_count
+                  and a.elapsed_seconds < p_elapsed_seconds)))::int as rank,
+    (select count(*) from public.attempts a
+       where a.test_set_id = p_test_set_id and a.status = 'completed')::int as participants;
+$$;
+
+revoke all on function public.compute_test_set_rank(uuid, int, int) from public;
+grant execute on function public.compute_test_set_rank(uuid, int, int) to authenticated;
