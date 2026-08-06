@@ -84,6 +84,13 @@ class _AttemptCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              attempt.testSetName ?? 'Mock Test',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -106,6 +113,26 @@ class _AttemptCard extends StatelessWidget {
               '(${attempt.totalQuestions} total)',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (attempt.rank != null && attempt.participantsCount != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    Icons.emoji_events_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Rank ${attempt.rank} / ${attempt.participantsCount}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
