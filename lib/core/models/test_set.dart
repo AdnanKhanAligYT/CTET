@@ -19,6 +19,7 @@ class TestSet {
     required this.examId,
     required this.type,
     required this.name,
+    required this.logoUrl,
     required this.subjects,
     required this.timeLimitMinutes,
     required this.year,
@@ -29,6 +30,11 @@ class TestSet {
   final String examId;
   final TestSetType type;
   final String name;
+
+  /// Admin-uploaded PNG/JPG/WebP (Supabase Storage, public bucket) shown
+  /// before the test's name in the list — null means "show the default
+  /// icon instead" (see TestSetListScreen).
+  final String? logoUrl;
 
   /// Ordered subject tabs the test screen walks through sequentially by
   /// default (manual tab switch always allowed) — e.g. ["Hindi", "English"].
@@ -47,6 +53,7 @@ class TestSet {
       examId: map['exam_id'] as String,
       type: TestSetTypeX.fromValue(map['type'] as String?),
       name: map['name'] as String? ?? '',
+      logoUrl: map['logo_url'] as String?,
       subjects:
           (map['subjects'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
