@@ -61,6 +61,14 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates the real launcher icon (assets/icon/icon.png) for every
+  # Android density + an adaptive-icon layer, replacing Flutter's default
+  # icon. Run `dart run flutter_launcher_icons` after adding the two
+  # source images to assets/icon/ (see that folder's setup note) and
+  # whenever the icon artwork changes — this package only generates on
+  # demand, it doesn't hook into every build.
+  flutter_launcher_icons: ^0.14.3
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -113,3 +121,17 @@ flutter:
     - family: Noto Sans
       fonts:
         - asset: assets/fonts/NotoSans-VariableFont.ttf
+
+# Real launcher icon — see dev_dependencies note above. image_path is the
+# full-bleed icon (navy background + white glyph) used as-is on iOS and as
+# the fallback/legacy icon on older Android; adaptive_icon_foreground is
+# the same glyph with a transparent background, layered by Android over
+# adaptive_icon_background at runtime so it works with any launcher's
+# icon mask (circle, squircle, rounded square, ...).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#16234B"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  min_sdk_android: 21
