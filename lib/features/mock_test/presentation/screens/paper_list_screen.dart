@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
+import '../../../../core/widgets/network_logo_avatar.dart';
 import '../../data/exam_catalog_repository.dart';
 
 /// Second screen in the Mock Test / PYQ flow — papers under one exam
@@ -88,6 +90,11 @@ class _PaperListScreenState extends State<PaperListScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
+                      leading: NetworkLogoAvatar(
+                        url: paper.logoUrl,
+                        fallbackIcon: Icons.description_outlined,
+                        fallbackColor: AppColors.tileMockTest,
+                      ),
                       title: Text(
                         paper.name,
                         style: Theme.of(context).textTheme.titleLarge
