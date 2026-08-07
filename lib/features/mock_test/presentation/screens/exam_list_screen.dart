@@ -93,7 +93,11 @@ class _ExamListScreenState extends State<ExamListScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      title: Text(exam.name),
+                      title: Text(
+                        exam.name,
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(
                         '/mock-test/papers?type=${widget.type.value}',
