@@ -88,7 +88,11 @@ class _PaperListScreenState extends State<PaperListScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      title: Text(paper.name),
+                      title: Text(
+                        paper.name,
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(
                         '/mock-test/sets?type=${widget.type.value}',
