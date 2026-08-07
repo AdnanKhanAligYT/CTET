@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
@@ -8,6 +7,7 @@ import '../../../../core/models/test_attempt.dart';
 import '../../../../core/models/test_set.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
+import '../../../../core/widgets/network_logo_avatar.dart';
 import '../../data/test_set_repository.dart';
 import 'named_test_screen.dart';
 
@@ -160,7 +160,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      leading: _TestSetLogo(url: set.logoUrl),
+                      leading: NetworkLogoAvatar(
+                        url: set.logoUrl,
+                        fallbackIcon: Icons.quiz_outlined,
+                        fallbackColor: AppColors.tileMockTest,
+                      ),
                       title: Text(
                         set.name,
                         style: Theme.of(context).textTheme.titleLarge
@@ -187,41 +191,3 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
 }
 
 enum _ResumeChoice { resume, fresh, cancel }
-
-/// The test set's admin-uploaded logo, or a plain quiz-icon tile (same
-/// visual language as the dashboard's quick-link tiles) when there isn't
-/// one — used both as the steady-state fallback and while a real logo is
-/// still loading, so there's never a blank gap in the list.
-class _TestSetLogo extends StatelessWidget {
-  const _TestSetLogo({required this.url});
-
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) {
-    final fallback = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.tileMockTest,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Icon(Icons.quiz_outlined, color: Colors.white, size: 22),
-    );
-
-    final logoUrl = url;
-    if (logoUrl == null || logoUrl.isEmpty) return fallback;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: CachedNetworkImage(
-        imageUrl: logoUrl,
-        width: 44,
-        height: 44,
-        fit: BoxFit.cover,
-        placeholder: (context, _) => fallback,
-        errorWidget: (context, _, _) => fallback,
-      ),
-    );
-  }
-}
