@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="ctet_tet_prep"
+        android:label="CTET TET Prep"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
