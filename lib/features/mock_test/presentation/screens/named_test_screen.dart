@@ -81,7 +81,17 @@ class _NamedTestScreenState extends State<NamedTestScreen>
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    final questions = await _repository.fetchQuestions(_testSet.id);
+    final fetchedQuestions = await _repository.fetchQuestions(_testSet.id);
+    // Only questions whose subject is one of this set's declared subjects
+    // are reachable through any tab (see _subjectQuestions below). A
+    // tagged question left over after the subjects list was edited (or
+    // ever mistagged) would otherwise still count toward "every question
+    // answered" while never being shown anywhere to actually answer —
+    // permanently blocking _allSubjectsComplete from ever becoming true.
+    final declaredSubjects = _testSet.subjects.toSet();
+    final questions = fetchedQuestions
+        .where((q) => declaredSubjects.contains(q.subject))
+        .toList();
     final bySubject = <String, List<Question>>{
       for (final subject in _testSet.subjects)
         subject: questions.where((q) => q.subject == subject).toList(),
