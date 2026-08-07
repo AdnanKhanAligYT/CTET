@@ -1,7 +1,6 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -90,12 +89,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   ),
                 ),
               ),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.push('/auth/phone'),
-                  child: const Text('Continue with mobile number'),
-                ),
-              ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => context.push('/auth/email?mode=login'),
@@ -163,10 +156,9 @@ class _GoogleButton extends StatelessWidget {
   }
 }
 
-/// Google's four-colour "G" mark, hand-drawn with arcs — there's no asset
-/// file involved (this sandbox can't fetch Google's official brand SVG),
-/// but the shape and brand colours match closely enough to read correctly
-/// on the button at a glance.
+/// Google's official four-colour "G" mark, loaded from a bundled SVG
+/// asset (`assets/icons/google_logo.svg`) rather than hand-drawn, so it
+/// matches the real brand mark exactly.
 class _GoogleMark extends StatelessWidget {
   const _GoogleMark();
 
@@ -174,67 +166,10 @@ class _GoogleMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SvgPicture.asset(
+      'assets/icons/google_logo.svg',
       width: _size,
       height: _size,
-      child: CustomPaint(painter: _GoogleMarkPainter()),
     );
   }
-}
-
-class _GoogleMarkPainter extends CustomPainter {
-  const _GoogleMarkPainter();
-
-  static const _blue = Color(0xFF4285F4);
-  static const _green = Color(0xFF34A853);
-  static const _yellow = Color(0xFFFBBC05);
-  static const _red = Color(0xFFEA4335);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final strokeWidth = size.width * 0.34;
-    final radius = size.width / 2 - strokeWidth / 2;
-    final ringRect = Rect.fromCircle(center: center, radius: radius);
-
-    Paint ringPaint(Color color) => Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-
-    double deg(double d) => d * math.pi / 180;
-    const gap = 6.0;
-
-    // Four ~90° quadrants (clockwise from the right), matching the real
-    // logo's layout: blue right, green bottom, yellow left, red top — with
-    // a small gap on each side of red so the ring reads as a "G", not an "O".
-    canvas.drawArc(ringRect, deg(-45), deg(135), false, ringPaint(_blue));
-    canvas.drawArc(ringRect, deg(90), deg(90), false, ringPaint(_green));
-    canvas.drawArc(ringRect, deg(180), deg(90 - gap), false, ringPaint(_yellow));
-    canvas.drawArc(
-      ringRect,
-      deg(270 + gap),
-      deg(90 - gap * 2),
-      false,
-      ringPaint(_red),
-    );
-
-    // The G's crossbar: a blue block from the ring's centre out to its
-    // right edge, at vertical-middle — this is what turns the ring into a
-    // "G" instead of a plain circle.
-    final barPaint = Paint()..color = _blue;
-    canvas.drawRect(
-      Rect.fromLTWH(
-        center.dx - strokeWidth * 0.1,
-        center.dy - strokeWidth / 2,
-        size.width / 2 - center.dx + strokeWidth * 0.6,
-        strokeWidth,
-      ),
-      barPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _GoogleMarkPainter oldDelegate) => false;
 }
