@@ -8,12 +8,19 @@ class ExamNode {
     required this.id,
     required this.name,
     required this.parentExamId,
+    required this.logoUrl,
     required this.sortOrder,
   });
 
   final String id;
   final String name;
   final String? parentExamId;
+
+  /// Admin-uploaded PNG/JPG/WebP (Supabase Storage, public bucket) shown
+  /// before the name in the exam/paper list — null means "show the
+  /// default icon instead".
+  final String? logoUrl;
+
   final int sortOrder;
 
   factory ExamNode.fromMap(Map<String, dynamic> map) {
@@ -21,6 +28,7 @@ class ExamNode {
       id: map['id'] as String,
       name: map['name'] as String? ?? '',
       parentExamId: map['parent_exam_id'] as String?,
+      logoUrl: map['logo_url'] as String?,
       sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
     );
   }
