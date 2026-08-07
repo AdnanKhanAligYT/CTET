@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/test_attempt.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/widgets/load_error.dart';
 import '../../data/test_set_repository.dart';
 import 'named_test_screen.dart';
 
@@ -26,6 +27,7 @@ class TestSetListScreen extends StatefulWidget {
 class _TestSetListScreenState extends State<TestSetListScreen> {
   final _repository = TestSetRepository();
   bool _loading = true;
+  String? _error;
   List<TestSet> _sets = const [];
   bool _opening = false;
 
@@ -36,12 +38,24 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
   }
 
   Future<void> _load() async {
-    final sets = await _repository.fetchTestSets(widget.paper.id, widget.type);
-    if (!mounted) return;
     setState(() {
-      _sets = sets;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final sets = await _repository.fetchTestSets(widget.paper.id, widget.type);
+      if (!mounted) return;
+      setState(() {
+        _sets = sets;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _open(TestSet set) async {
@@ -113,6 +127,13 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(widget.paper.name)),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.paper.name)),
+        body: LoadError(message: _error!, onRetry: _load),
       );
     }
 

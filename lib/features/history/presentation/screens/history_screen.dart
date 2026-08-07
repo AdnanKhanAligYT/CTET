@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/widgets/load_error.dart';
 import '../../data/history_repository.dart';
 import '../../domain/attempt.dart';
 
@@ -15,6 +16,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final _repository = HistoryRepository();
   bool _loading = true;
+  String? _error;
   List<Attempt> _attempts = const [];
 
   @override
@@ -26,18 +28,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _load() async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
-    final attempts = await _repository.fetchAttempts(uid);
-    if (!mounted) return;
     setState(() {
-      _attempts = attempts;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final attempts = await _repository.fetchAttempts(uid);
+      if (!mounted) return;
+      setState(() {
+        _attempts = attempts;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('History')),
+        body: LoadError(message: _error!, onRetry: _load),
+      );
     }
 
     return Scaffold(

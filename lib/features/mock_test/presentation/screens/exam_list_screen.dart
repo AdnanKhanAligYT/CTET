@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/widgets/load_error.dart';
 import '../../data/exam_catalog_repository.dart';
 
 /// First screen behind both the "Mock Test" and "Previous Year Questions"
@@ -21,6 +22,7 @@ class ExamListScreen extends StatefulWidget {
 class _ExamListScreenState extends State<ExamListScreen> {
   final _repository = ExamCatalogRepository();
   bool _loading = true;
+  String? _error;
   List<ExamNode> _exams = const [];
 
   @override
@@ -30,12 +32,24 @@ class _ExamListScreenState extends State<ExamListScreen> {
   }
 
   Future<void> _load() async {
-    final exams = await _repository.fetchTopLevelExams();
-    if (!mounted) return;
     setState(() {
-      _exams = exams;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final exams = await _repository.fetchTopLevelExams();
+      if (!mounted) return;
+      setState(() {
+        _exams = exams;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -48,6 +62,13 @@ class _ExamListScreenState extends State<ExamListScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(title)),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: LoadError(message: _error!, onRetry: _load),
       );
     }
 

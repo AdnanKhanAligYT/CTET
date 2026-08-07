@@ -33,8 +33,18 @@ login, storage) stays on Supabase.
    repo → Run. This creates every table (`profiles`, `questions`,
    `question_progress`, `dictionary_words`, `dictionary_progress`,
    `syllabus_topics`, `syllabus_progress`, `timetable_blocks`, `notes`,
-   `attempts`) with Row Level Security policies already wired up — no
-   separate "deploy rules" step like Firestore needed.
+   `attempts`, `exams`, `test_sets`, `test_set_questions`) with Row Level
+   Security policies already wired up — no separate "deploy rules" step
+   like Firestore needed.
+
+   **Already ran an older version of this schema before?** The Mock Test
+   / Previous Year Questions catalog (`exams`, `test_sets`,
+   `test_set_questions`, plus a few extra columns on `attempts`) was added
+   later — if Mock Test, PYQ, or History show an endless loading circle,
+   that's why: those tables don't exist in your database yet. Run
+   `supabase/migration_mock_test_catalog.sql` once (same SQL Editor →
+   New query → paste → Run) to add just the missing pieces — it's safe
+   even if you're not sure whether you already have them.
 3. **Turn off forced email confirmation** (so email signup lands students
    straight in the app, matching the original non-blocking design):
    Dashboard → Authentication → Sign In / Providers → Email → toggle
@@ -111,6 +121,15 @@ login, storage) stays on Supabase.
      `topic_name`, `order` (number, controls display order)
    - `dictionary_words`: `word`, `meaning_hi`, `meaning_en`,
      `example_sentence` (all strings)
+   - Mock Test / Previous Year Questions need three tables filled in this
+     order: `exams` (a top-level row like "CTET" with `parent_exam_id`
+     left blank, then a paper row like "CTET Paper 1" with
+     `parent_exam_id` set to the top-level row's `id`), `test_sets` (one
+     row per named test, `exam_id` = the paper row's `id`, `type` =
+     `mock_test` or `pyq`), `test_set_questions` (links each `test_sets`
+     row to `questions` rows via `set_id`/`question_id`, with `position`
+     controlling order). Until these exist, the screens just show "abhi
+     add nahi hua" (not an error) — that's expected, not a bug.
 
 ## Reminders
 

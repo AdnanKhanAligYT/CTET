@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/widgets/load_error.dart';
 import '../../data/exam_catalog_repository.dart';
 
 /// Second screen in the Mock Test / PYQ flow — papers under one exam
@@ -20,6 +21,7 @@ class PaperListScreen extends StatefulWidget {
 class _PaperListScreenState extends State<PaperListScreen> {
   final _repository = ExamCatalogRepository();
   bool _loading = true;
+  String? _error;
   List<ExamNode> _papers = const [];
 
   @override
@@ -29,12 +31,24 @@ class _PaperListScreenState extends State<PaperListScreen> {
   }
 
   Future<void> _load() async {
-    final papers = await _repository.fetchPapers(widget.parent.id);
-    if (!mounted) return;
     setState(() {
-      _papers = papers;
-      _loading = false;
+      _loading = true;
+      _error = null;
     });
+    try {
+      final papers = await _repository.fetchPapers(widget.parent.id);
+      if (!mounted) return;
+      setState(() {
+        _papers = papers;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -43,6 +57,13 @@ class _PaperListScreenState extends State<PaperListScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(widget.parent.name)),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.parent.name)),
+        body: LoadError(message: _error!, onRetry: _load),
       );
     }
 
