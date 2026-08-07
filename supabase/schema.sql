@@ -205,6 +205,10 @@ create table public.test_sets (
   exam_id uuid not null references public.exams (id) on delete cascade,
   type text not null check (type in ('mock_test', 'pyq')),
   name text not null,
+  -- Optional uploaded PNG/JPG/WebP (Storage bucket below) shown before
+  -- the test's name in the Mock Test/PYQ list — null falls back to a
+  -- plain default icon in the app.
+  logo_url text,
   -- Ordered subject tabs the test screen walks through — by default the
   -- next subject only becomes reachable once every question in the
   -- current one is answered; manually tapping a tab always works.
@@ -237,6 +241,14 @@ create table public.test_set_questions (
 alter table public.test_set_questions enable row level security;
 create policy "test_set_questions: read for signed-in students" on public.test_set_questions
   for select using (auth.role() = 'authenticated');
+
+-- Uploaded test-set logos (see test_sets.logo_url) — public so the app can
+-- load them with a plain network image request, no auth header needed.
+-- Only the admin tool ever writes here, using the service_role key, which
+-- bypasses Storage RLS the same way it bypasses every table's RLS above.
+insert into storage.buckets (id, name, public)
+values ('test-set-logos', 'test-set-logos', true)
+on conflict (id) do nothing;
 
 -- ── Resumable, unlimited-retake attempts on a named test set ──
 -- (daily due-today practice via take_test.php-equivalent keeps using the
