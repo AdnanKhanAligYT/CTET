@@ -189,6 +189,10 @@ create table public.exams (
   -- null = top-level exam (e.g. "CTET"); non-null = a paper under it
   -- (e.g. "CTET Paper 1"). Only two levels deep are supported by the app.
   parent_exam_id uuid references public.exams (id) on delete cascade,
+  -- Optional uploaded PNG/JPG/WebP (exam-logos Storage bucket below)
+  -- shown before the name in the exam/paper list — null falls back to a
+  -- plain default icon in the app.
+  logo_url text,
   sort_order int not null default 0,
   active boolean not null default true
 );
@@ -198,6 +202,14 @@ create index exams_parent_idx on public.exams (parent_exam_id);
 alter table public.exams enable row level security;
 create policy "exams: read for signed-in students" on public.exams
   for select using (auth.role() = 'authenticated');
+
+-- Uploaded exam/paper logos (see exams.logo_url) — public so the app can
+-- load them with a plain network image request, no auth header needed.
+-- Only the admin tool ever writes here, using the service_role key, which
+-- bypasses Storage RLS the same way it bypasses every table's RLS above.
+insert into storage.buckets (id, name, public)
+values ('exam-logos', 'exam-logos', true)
+on conflict (id) do nothing;
 
 create table public.test_sets (
   id uuid primary key default gen_random_uuid(),
