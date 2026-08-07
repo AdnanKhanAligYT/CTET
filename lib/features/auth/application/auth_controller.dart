@@ -101,6 +101,27 @@ class AuthController extends Notifier<AuthState> {
         idToken: idToken,
         accessToken: googleAuth.accessToken,
       );
+      // Don't rely on Supabase's own decoding of the ID token for the
+      // photo — whether user_metadata ends up with an avatar_url/picture
+      // claim from that varies (this is exactly why the name showed up
+      // but the photo didn't). GoogleSignInAccount.photoUrl comes
+      // straight from the native account picker every time, so write it
+      // (and the display name, same reasoning) into user_metadata
+      // ourselves on every sign-in — EditProfileScreen's first-time-setup
+      // prefill and HomeGate's photo backfill both already read
+      // avatar_url/full_name from there unchanged.
+      final photoUrl = googleUser.photoUrl;
+      final displayName = googleUser.displayName;
+      if (photoUrl != null || displayName != null) {
+        await _auth.updateUser(
+          UserAttributes(
+            data: {
+              if (photoUrl != null) 'avatar_url': photoUrl,
+              if (displayName != null) 'full_name': displayName,
+            },
+          ),
+        );
+      }
       state = state.copyWith(status: AuthStatus.idle);
       return true;
     } on AuthException catch (e) {
