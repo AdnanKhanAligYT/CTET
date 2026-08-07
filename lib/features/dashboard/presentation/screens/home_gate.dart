@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/models/user_profile.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../../profile/presentation/screens/edit_profile_screen.dart';
 import 'dashboard_screen.dart';
@@ -26,8 +28,27 @@ class HomeGate extends ConsumerWidget {
         if (profile == null || !profile.isSetupComplete) {
           return const EditProfileScreen(isFirstTimeSetup: true);
         }
+        _backfillGooglePhotoIfMissing(ref, profile);
         return DashboardScreen(profile: profile);
       },
     );
   }
+}
+
+/// Best-effort, fire-and-forget: a profile whose setup completed before
+/// Google Sign-In existed (or before it captured a photo) never gets a
+/// second chance to pick one up, since this is the only screen every
+/// session passes through once setup is done. No-ops instantly for anyone
+/// who already has a photo, or who isn't signed in via Google.
+void _backfillGooglePhotoIfMissing(WidgetRef ref, UserProfile profile) {
+  if (profile.photoURL != null && profile.photoURL!.isNotEmpty) return;
+  final metadata = Supabase.instance.client.auth.currentUser?.userMetadata;
+  final googlePhoto =
+      metadata?['avatar_url'] as String? ?? metadata?['picture'] as String?;
+  if (googlePhoto == null || googlePhoto.isEmpty) return;
+  Future.microtask(() {
+    ref
+        .read(profileControllerProvider.notifier)
+        .updateProfile(profile.copyWith(photoURL: googlePhoto));
+  });
 }
