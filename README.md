@@ -159,6 +159,40 @@ slots working, but earn nothing. To actually earn money:
    before Play Store submission regardless of ads, see the project plan's
    Play Store checklist.
 
+## Release signing (Play Store uploads)
+
+`android/app/build.gradle.kts` looks for `android/key.properties` (gitignored
+— never commit this file or the `.jks` it points at) and signs release
+builds with it. Without it, release builds silently fall back to the debug
+key, which the Play Store will reject.
+
+1. Generate an upload keystore once (keep the output `.jks` file and its
+   passwords somewhere safe forever — losing it means you can never publish
+   an update to an app already live on the Play Store, only a brand-new
+   listing):
+   ```
+   keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA \
+     -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Put the resulting `upload-keystore.jks` at `android/app/upload-keystore.jks`.
+3. Create `android/key.properties`:
+   ```
+   storePassword=<your store password>
+   keyPassword=<your key password>
+   keyAlias=upload
+   storeFile=upload-keystore.jks
+   ```
+4. Build the release bundle for Play Store upload:
+   ```
+   flutter build appbundle --release
+   ```
+   Output lands at `build/app/outputs/bundle/release/app-release.aab`.
+
+Before submitting to Play Store, also: swap the AdMob test IDs for real
+ones (see "Ads" above), and set a real Data Safety declaration in Play
+Console matching the permissions in `AndroidManifest.xml` (internet,
+location, notifications, exact alarms).
+
 ## Running
 
 ```
