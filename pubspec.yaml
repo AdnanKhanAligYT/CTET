@@ -69,6 +69,15 @@ dev_dependencies:
   # demand, it doesn't hook into every build.
   flutter_launcher_icons: ^0.14.3
 
+  # Generates a proper native splash screen (Android <12 + iOS use a
+  # themed launch drawable; Android 12+ uses the OS's own splash API,
+  # configured separately below since it has tighter size constraints).
+  # Without this, only Android 12+ shows the big logo automatically —
+  # older Android versions just show a blank screen while the app loads.
+  # Run `dart run flutter_native_splash:create` after adding/changing the
+  # icon artwork.
+  flutter_native_splash: ^2.4.6
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -135,3 +144,16 @@ flutter_launcher_icons:
   adaptive_icon_background: "#16234B"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   min_sdk_android: 21
+
+# Native splash screen — see dev_dependencies note above. Same navy brand
+# color as the adaptive icon background, so the launch experience is one
+# consistent navy-to-app transition on every Android version (and iOS).
+# android_12 is configured separately because Android 12+'s own splash
+# API constrains the icon to a smaller safe zone than pre-12's full-bleed
+# launch drawable — same image, tool handles the sizing difference.
+flutter_native_splash:
+  color: "#16234B"
+  image: assets/icon/icon.png
+  android_12:
+    color: "#16234B"
+    image: assets/icon/icon.png
