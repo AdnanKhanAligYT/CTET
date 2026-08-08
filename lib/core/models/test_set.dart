@@ -18,6 +18,7 @@ class TestSet {
     required this.id,
     required this.examId,
     required this.type,
+    required this.types,
     required this.name,
     required this.logoUrl,
     required this.subjects,
@@ -29,6 +30,12 @@ class TestSet {
   final String id;
   final String examId;
   final TestSetType type;
+
+  /// Every list this set shows up in (see [TestSetRepository.fetchTestSets])
+  /// — usually just [type], but the admin tool's "+ ... mein bhi dikhao"
+  /// button can cross-list the same set (same tagged questions) into both
+  /// Mock Test and PYQ at once.
+  final List<TestSetType> types;
   final String name;
 
   /// Admin-uploaded PNG/JPG/WebP (Supabase Storage, public bucket) shown
@@ -48,10 +55,15 @@ class TestSet {
   final int sortOrder;
 
   factory TestSet.fromMap(Map<String, dynamic> map) {
+    final type = TestSetTypeX.fromValue(map['type'] as String?);
+    final typesRaw = (map['types'] as List?)?.map((e) => e.toString()).toList();
     return TestSet(
       id: map['id'] as String,
       examId: map['exam_id'] as String,
-      type: TestSetTypeX.fromValue(map['type'] as String?),
+      type: type,
+      types: (typesRaw == null || typesRaw.isEmpty)
+          ? [type]
+          : typesRaw.map(TestSetTypeX.fromValue).toList(),
       name: map['name'] as String? ?? '',
       logoUrl: map['logo_url'] as String?,
       subjects:

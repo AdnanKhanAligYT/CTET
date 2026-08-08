@@ -216,6 +216,11 @@ create table public.test_sets (
   -- Always a paper-level exam row (parent_exam_id is not null on it).
   exam_id uuid not null references public.exams (id) on delete cascade,
   type text not null check (type in ('mock_test', 'pyq')),
+  -- Every list this set actually shows up in — always at least [type],
+  -- but the admin tool's "+ ... mein bhi dikhao" button can add the
+  -- other one too, so the same test (same tagged questions) appears
+  -- under both Mock Test and PYQ without being duplicated.
+  types text[] not null default '{}',
   name text not null,
   -- Optional uploaded PNG/JPG/WebP (Storage bucket below) shown before
   -- the test's name in the Mock Test/PYQ list — null falls back to a

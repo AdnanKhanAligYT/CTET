@@ -14,12 +14,15 @@ class TestSetRepository {
 
   final SupabaseClient _client;
 
+  /// Matches on `types` (array-membership), not `type` (equality) — a set
+  /// admin-cross-listed into both Mock Test and PYQ has both values in
+  /// `types`, so it needs to show up under either list's query.
   Future<List<TestSet>> fetchTestSets(String examId, TestSetType type) async {
     final rows = await _client
         .from('test_sets')
         .select()
         .eq('exam_id', examId)
-        .eq('type', type.value)
+        .contains('types', [type.value])
         .eq('active', true)
         .order('sort_order');
     return rows.map((row) => TestSet.fromMap(row)).toList();
