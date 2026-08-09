@@ -153,6 +153,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
                   _QuickLinkTile(
+                    icon: Icons.auto_stories_outlined,
+                    color: AppColors.tileMockTest,
+                    title: 'Subject Wise Revision',
+                    subtitle: 'Subject chuno, turant test shuru',
+                    onTap: () => context.push('/mock-test/subjects'),
+                  ),
+                  const SizedBox(height: 12),
+                  _QuickLinkTile(
                     icon: Icons.checklist_outlined,
                     color: AppColors.tileSyllabus,
                     title: 'Syllabus Tracker',

@@ -12,14 +12,22 @@ import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
 import 'test_result_screen.dart';
 
-/// Mirrors `take_test.php` from the reference app: always just today's due
-/// questions (new + anything whose revision date has arrived) in mixed
-/// order, instant feedback + explanation the moment an option is picked,
-/// answers locked once chosen, and a choice after each question to
-/// continue or stop and see the result — answered questions already have
-/// their next due date set, so stopping early never repeats what's done.
+/// Mirrors `take_test.php` from the reference app: with no [subject], it's
+/// always just today's due questions (new + anything whose revision date
+/// has arrived) in mixed order. With a [subject] (Subject Wise Revision,
+/// launched from the dashboard's subject list), the due-date gate is
+/// skipped entirely and every question tagged with that subject — for the
+/// student's selected exams — is shuffled in instead, so revision isn't
+/// blocked by the spaced-repetition schedule. Either way: instant feedback
+/// + explanation the moment an option is picked, answers locked once
+/// chosen, and a choice after each question to continue or stop and see
+/// the result.
 class TakeTestScreen extends ConsumerStatefulWidget {
-  const TakeTestScreen({super.key});
+  const TakeTestScreen({super.key, this.subject});
+
+  /// When set, this is a Subject Wise Revision run for this subject rather
+  /// than the daily due-today practice.
+  final String? subject;
 
   @override
   ConsumerState<TakeTestScreen> createState() => _TakeTestScreenState();
@@ -31,7 +39,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
   bool _loading = true;
   String? _errorMessage;
-  List<Question> _dueQuestions = const [];
+  List<Question> _questions = const [];
   Map<String, ReviewProgress> _progress = const {};
 
   int _currentIndex = 0;
@@ -66,21 +74,24 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     final allQuestions = await _repository.fetchQuestionsForExams(exams);
     final progress = await _repository.fetchProgress(user.id);
 
-    final due =
-        allQuestions
-            .where((q) => _spacedRepetition.isDueToday(progress[q.id]))
-            .toList()
+    final subject = widget.subject;
+    final selected =
+        (subject == null
+            ? allQuestions.where(
+                (q) => _spacedRepetition.isDueToday(progress[q.id]),
+              )
+            : allQuestions.where((q) => q.subject == subject)).toList()
           ..shuffle();
 
     if (!mounted) return;
     setState(() {
-      _dueQuestions = due;
+      _questions = selected;
       _progress = progress;
       _loading = false;
     });
   }
 
-  Question get _currentQuestion => _dueQuestions[_currentIndex];
+  Question get _currentQuestion => _questions[_currentIndex];
 
   Future<void> _selectOption(int index) async {
     if (_locked) return;
@@ -110,7 +121,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
   }
 
   void _next() {
-    if (_currentIndex + 1 < _dueQuestions.length) {
+    if (_currentIndex + 1 < _questions.length) {
       setState(() {
         _currentIndex++;
         _selectedOption = null;
@@ -126,7 +137,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     if (user != null) {
       await _repository.saveAttempt(
         uid: user.id,
-        totalQuestions: _dueQuestions.length,
+        totalQuestions: _questions.length,
         correctCount: _correctCount,
         wrongCount: _wrongCount,
         startedAt: _startedAt,
@@ -139,7 +150,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
         builder: (_) => TestResultScreen(
           correctCount: _correctCount,
           wrongCount: _wrongCount,
-          totalQuestions: _dueQuestions.length,
+          totalQuestions: _questions.length,
         ),
       ),
     );
@@ -147,13 +158,15 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenTitle = widget.subject ?? 'Mock Test';
+
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_errorMessage != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Mock Test')),
+        appBar: AppBar(title: Text(screenTitle)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -173,14 +186,16 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
       );
     }
 
-    if (_dueQuestions.isEmpty) {
+    if (_questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Mock Test')),
-        body: const Center(
+        appBar: AppBar(title: Text(screenTitle)),
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'No questions due today — you\'re all caught up! Check back tomorrow.',
+              widget.subject == null
+                  ? 'No questions due today — you\'re all caught up! Check back tomorrow.'
+                  : 'Is subject ke abhi questions upload nahi hue.',
               textAlign: TextAlign.center,
             ),
           ),
@@ -192,7 +207,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Question ${_currentIndex + 1} of ${_dueQuestions.length}'),
+        title: Text('Question ${_currentIndex + 1} of ${_questions.length}'),
       ),
       body: SafeArea(
         child: ListView(

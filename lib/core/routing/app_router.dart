@@ -15,6 +15,7 @@ import '../../features/mock_test/presentation/screens/exam_list_screen.dart';
 import '../../features/mock_test/presentation/screens/named_test_result_screen.dart';
 import '../../features/mock_test/presentation/screens/named_test_screen.dart';
 import '../../features/mock_test/presentation/screens/paper_list_screen.dart';
+import '../../features/mock_test/presentation/screens/subject_revision_list_screen.dart';
 import '../../features/mock_test/presentation/screens/take_test_screen.dart';
 import '../../features/mock_test/presentation/screens/test_set_list_screen.dart';
 import '../../features/notepad/presentation/screens/notepad_screen.dart';
@@ -46,6 +47,7 @@ const _requiresAuth = [
   '/mock-test/sets',
   '/mock-test/named',
   '/mock-test/named/result',
+  '/mock-test/subjects',
   '/pyq',
   '/syllabus',
   '/dictionary',
@@ -142,10 +144,16 @@ final appRouter = GoRouter(
       builder: (context, state) =>
           NamedTestResultScreen(attempt: state.extra as TestAttempt),
     ),
-    // ── Daily due-today practice (spaced repetition, unchanged) ──
+    // ── Daily due-today practice (spaced repetition), and Subject Wise
+    // Revision (same screen, `subject` query param switches the mode) ──
     GoRoute(
       path: '/mock-test/take',
-      builder: (context, state) => const TakeTestScreen(),
+      builder: (context, state) =>
+          TakeTestScreen(subject: state.uri.queryParameters['subject']),
+    ),
+    GoRoute(
+      path: '/mock-test/subjects',
+      builder: (context, state) => const SubjectRevisionListScreen(),
     ),
     GoRoute(
       path: '/syllabus',
