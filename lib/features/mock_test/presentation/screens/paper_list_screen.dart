@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
 import '../../data/exam_catalog_repository.dart';
+import '../exam_navigation.dart';
 
 /// Recursive middle screen in the Mock Test / PYQ flow — children of one
 /// exam node (e.g. tapping "CTET" shows "CTET Paper 1", "CTET Paper 2";
@@ -71,16 +72,12 @@ class _PaperListScreenState extends State<PaperListScreen> {
     if (_checkingId != null) return;
     setState(() => _checkingId = node.id);
     try {
-      final children = await _repository.fetchPapers(node.id);
-      if (!mounted) return;
-      if (children.isNotEmpty) {
-        context.push(
-          '/mock-test/papers?type=${widget.type.value}',
-          extra: node,
-        );
-      } else {
-        context.push('/mock-test/sets?type=${widget.type.value}', extra: node);
-      }
+      await navigateIntoExamNode(
+        context: context,
+        repository: _repository,
+        node: node,
+        type: widget.type,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

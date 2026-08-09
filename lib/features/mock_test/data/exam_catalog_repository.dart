@@ -33,4 +33,17 @@ class ExamCatalogRepository {
         .order('sort_order');
     return rows.map((row) => ExamNode.fromMap(row)).toList();
   }
+
+  /// The one exams row currently marked as the dashboard shortcut, if any
+  /// (a partial unique index guarantees at most one).
+  Future<ExamNode?> fetchShortcut() async {
+    final rows = await _client
+        .from('exams')
+        .select()
+        .eq('active', true)
+        .eq('is_shortcut', true)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return ExamNode.fromMap(rows.first);
+  }
 }

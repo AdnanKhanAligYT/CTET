@@ -10,6 +10,7 @@ class ExamNode {
     required this.parentExamId,
     required this.logoUrl,
     required this.sortOrder,
+    required this.isShortcut,
   });
 
   final String id;
@@ -23,6 +24,11 @@ class ExamNode {
 
   final int sortOrder;
 
+  /// At most one exams row app-wide has this true (enforced by a partial
+  /// unique index) — that node shows as a one-tap shortcut above the Mock
+  /// Test tile on the dashboard instead of navigating the full tree.
+  final bool isShortcut;
+
   factory ExamNode.fromMap(Map<String, dynamic> map) {
     return ExamNode(
       id: map['id'] as String,
@@ -30,6 +36,7 @@ class ExamNode {
       parentExamId: map['parent_exam_id'] as String?,
       logoUrl: map['logo_url'] as String?,
       sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
+      isShortcut: map['is_shortcut'] as bool? ?? false,
     );
   }
 }

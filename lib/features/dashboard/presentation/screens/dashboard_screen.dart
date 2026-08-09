@@ -2,22 +2,77 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/models/exam_node.dart';
+import '../../../../core/models/test_set.dart';
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../mock_test/data/exam_catalog_repository.dart';
+import '../../../mock_test/presentation/exam_navigation.dart';
 
 /// Home screen: profile summary up top, the study-tool quick-link tiles
 /// (Mock Test, Previous Year Questions, Syllabus, ...) — see
 /// `core/services/ad_service.dart` for how the banner ad unit is wired
 /// (test IDs until a real AdMob account is linked).
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key, required this.profile});
 
   final UserProfile profile;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  final _examRepository = ExamCatalogRepository();
+  ExamNode? _shortcut;
+  bool _opening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShortcut();
+  }
+
+  // Failure here isn't worth an error banner over — the shortcut is a
+  // convenience on top of the always-available Mock Test tile below it, so
+  // silently showing no shortcut (same as "none set") is an acceptable
+  // fallback.
+  Future<void> _loadShortcut() async {
+    try {
+      final shortcut = await _examRepository.fetchShortcut();
+      if (!mounted) return;
+      setState(() => _shortcut = shortcut);
+    } catch (_) {
+      // ignore — dashboard still works fine without the shortcut tile.
+    }
+  }
+
+  Future<void> _openShortcut() async {
+    final shortcut = _shortcut;
+    if (shortcut == null || _opening) return;
+    setState(() => _opening = true);
+    try {
+      await navigateIntoExamNode(
+        context: context,
+        repository: _examRepository,
+        node: shortcut,
+        type: TestSetType.mockTest,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profile;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -68,6 +123,16 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 28),
+                  if (_shortcut != null) ...[
+                    _QuickLinkTile(
+                      icon: Icons.bolt,
+                      color: AppColors.tileMockTest,
+                      title: _shortcut!.name,
+                      subtitle: 'Shortcut — seedha yahan pahunch jao',
+                      onTap: _openShortcut,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _QuickLinkTile(
                     icon: Icons.quiz_outlined,
                     color: AppColors.tileMockTest,

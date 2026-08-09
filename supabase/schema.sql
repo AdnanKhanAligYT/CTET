@@ -197,10 +197,18 @@ create table public.exams (
   -- plain default icon in the app.
   logo_url text,
   sort_order int not null default 0,
-  active boolean not null default true
+  active boolean not null default true,
+  -- At most one exams row app-wide can be true — enforced below by a
+  -- partial unique index (same pattern as attempts_in_progress_unique).
+  -- The dashboard shows this node as a one-tap shortcut above the Mock
+  -- Test tile, set from ctet_content_admin.php's Exams tab.
+  is_shortcut boolean not null default false
 );
 
 create index exams_parent_idx on public.exams (parent_exam_id);
+
+create unique index exams_shortcut_unique on public.exams (is_shortcut)
+  where is_shortcut;
 
 alter table public.exams enable row level security;
 create policy "exams: read for signed-in students" on public.exams
