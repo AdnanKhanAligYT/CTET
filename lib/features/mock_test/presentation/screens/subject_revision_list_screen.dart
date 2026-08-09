@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
+import '../subject_style.dart';
 
 /// Behind the dashboard's "Subject Wise Revision" tile — the subject list
 /// isn't admin-managed, it's derived on the fly from whatever questions
@@ -119,20 +119,21 @@ class _SubjectRevisionListScreenState
                 itemCount: _subjectCounts.length,
                 itemBuilder: (context, index) {
                   final entry = _subjectCounts[index];
+                  final style = subjectStyleFor(entry.key);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: AppColors.tileMockTest,
-                        child: const Icon(
-                          Icons.menu_book,
-                          color: Colors.white,
-                        ),
+                        backgroundColor: style.color,
+                        child: Icon(style.icon, color: Colors.white),
                       ),
                       title: Text(
                         entry.key,
                         style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                            ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: style.color,
+                            ),
                       ),
                       subtitle: Text('${entry.value} questions'),
                       trailing: const Icon(Icons.chevron_right),

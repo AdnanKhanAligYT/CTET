@@ -11,6 +11,7 @@ import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
+import '../subject_style.dart';
 import 'test_result_screen.dart';
 
 /// Mirrors `take_test.php` from the reference app: with no [subject], it's
@@ -18,11 +19,11 @@ import 'test_result_screen.dart';
 /// has arrived) in mixed order. With a [subject] (Subject Wise Revision,
 /// launched from the dashboard's subject list), the due-date gate is
 /// skipped entirely and every question tagged with that subject — for the
-/// student's selected exams — is shuffled in instead, so revision isn't
-/// blocked by the spaced-repetition schedule. Either way: instant feedback
-/// + explanation the moment an option is picked, answers locked once
-/// chosen, and a choice after each question to continue or stop and see
-/// the result.
+/// student's selected exams — is queued in card-stack order instead (see
+/// the sort in `_load()`), so revision isn't blocked by the
+/// spaced-repetition schedule. Either way: instant feedback + explanation
+/// the moment an option is picked, answers locked once chosen, and a
+/// choice after each question to continue or stop and see the result.
 class TakeTestScreen extends ConsumerStatefulWidget {
   const TakeTestScreen({super.key, this.subject});
 
@@ -76,13 +77,30 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     final progress = await _repository.fetchProgress(user.id);
 
     final subject = widget.subject;
-    final selected =
-        (subject == null
-            ? allQuestions.where(
-                (q) => _spacedRepetition.isDueToday(progress[q.id]),
-              )
-            : allQuestions.where((q) => q.subject == subject)).toList()
-          ..shuffle();
+    final List<Question> selected;
+    if (subject == null) {
+      selected = allQuestions
+          .where((q) => _spacedRepetition.isDueToday(progress[q.id]))
+          .toList()
+        ..shuffle();
+    } else {
+      // Card-stack behaviour: never-attempted questions come first; the
+      // moment one is answered its lastReviewedAt becomes "now", which
+      // sorts it to the very back next time this list is built. Once
+      // every question in the subject has been attempted at least once,
+      // this same ascending sort naturally starts from the
+      // least-recently-attempted one again — the cycle restarts on its
+      // own, no separate "cycle complete" bookkeeping needed.
+      selected = allQuestions.where((q) => q.subject == subject).toList()
+        ..sort((a, b) {
+          final aTime = progress[a.id]?.lastReviewedAt;
+          final bTime = progress[b.id]?.lastReviewedAt;
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return -1;
+          if (bTime == null) return 1;
+          return aTime.compareTo(bTime);
+        });
+    }
 
     if (!mounted) return;
     setState(() {
@@ -215,6 +233,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     }
 
     final question = _currentQuestion;
+    final subjectStyle = subjectStyleFor(question.subject);
 
     return Scaffold(
       appBar: AppBar(
@@ -227,7 +246,21 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
             Wrap(
               spacing: 8,
               children: [
-                Chip(label: Text(question.subject)),
+                Chip(
+                  avatar: Icon(
+                    subjectStyle.icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  label: Text(
+                    question.subject,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  backgroundColor: subjectStyle.color,
+                ),
                 if (question.topic.isNotEmpty)
                   Chip(label: Text(question.topic)),
               ],
