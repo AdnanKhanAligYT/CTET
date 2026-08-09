@@ -7,6 +7,7 @@ import '../../../../core/models/question.dart';
 import '../../../../core/models/review_progress.dart';
 import '../../../../core/services/spaced_repetition_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
@@ -118,6 +119,16 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     );
     _progress = {..._progress, question.id: updatedProgress};
     await _repository.saveProgress(user.id, updatedProgress);
+  }
+
+  Future<void> _confirmAndFinish() async {
+    final attempted = _correctCount + _wrongCount;
+    final confirmed = await confirmSubmitTest(
+      context: context,
+      attempted: attempted,
+      total: _questions.length,
+    );
+    if (confirmed) _finish();
   }
 
   void _next() {
@@ -253,7 +264,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _finish,
+                      onPressed: _confirmAndFinish,
                       child: const Text('Submit & Finish'),
                     ),
                   ),

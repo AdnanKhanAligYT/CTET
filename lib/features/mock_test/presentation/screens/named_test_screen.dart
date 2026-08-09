@@ -8,6 +8,7 @@ import '../../../../core/models/question.dart';
 import '../../../../core/models/test_attempt.dart';
 import '../../../../core/models/test_set.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/test_set_repository.dart';
 
@@ -234,6 +235,16 @@ class _NamedTestScreenState extends State<NamedTestScreen>
     context.pushReplacement('/mock-test/named/result', extra: result);
   }
 
+  Future<void> _confirmAndFinish() async {
+    final attempted = _correctCount + _wrongCount;
+    final confirmed = await confirmSubmitTest(
+      context: context,
+      attempted: attempted,
+      total: _questions.length,
+    );
+    if (confirmed) _finish();
+  }
+
   String _formatElapsed() {
     final minutes = _elapsedSeconds ~/ 60;
     final seconds = _elapsedSeconds % 60;
@@ -380,7 +391,7 @@ class _NamedTestScreenState extends State<NamedTestScreen>
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _finish,
+                onPressed: _confirmAndFinish,
                 child: const Text('Submit & Finish'),
               ),
             ),

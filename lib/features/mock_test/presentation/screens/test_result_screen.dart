@@ -31,8 +31,14 @@ class _TestResultScreenState extends State<TestResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final skipped =
-        widget.totalQuestions - widget.correctCount - widget.wrongCount;
+    final attempted = widget.correctCount + widget.wrongCount;
+    final skipped = widget.totalQuestions - attempted;
+    // Percentage is based on what was actually attempted, not the full
+    // test length — a partial submission (e.g. quitting after 5 of 20)
+    // shouldn't be scored as if the other 15 were wrong.
+    final percent = attempted == 0
+        ? 0
+        : (widget.correctCount * 100 / attempted).round();
     return Scaffold(
       appBar: AppBar(title: const Text('Result')),
       body: SafeArea(
@@ -43,17 +49,18 @@ class _TestResultScreenState extends State<TestResultScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${widget.correctCount} / ${widget.totalQuestions}',
+                '$percent%',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                'Correct answers',
+                '${widget.correctCount} / $attempted correct (attempted)',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
+              _StatRow(label: 'Attempted', value: attempted),
               _StatRow(label: 'Correct', value: widget.correctCount),
               _StatRow(label: 'Wrong', value: widget.wrongCount),
               if (skipped > 0) _StatRow(label: 'Skipped', value: skipped),
