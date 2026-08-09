@@ -186,8 +186,11 @@ create policy "attempts: own rows" on public.attempts
 create table public.exams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  -- null = top-level exam (e.g. "CTET"); non-null = a paper under it
-  -- (e.g. "CTET Paper 1"). Only two levels deep are supported by the app.
+  -- null = top-level exam (e.g. "CTET"); non-null = a child node under it
+  -- (e.g. "CTET Paper 1", or a "Science" section under that paper). Any
+  -- number of levels deep is supported — the app (PaperListScreen) checks
+  -- each tapped node for children and recurses until it hits a leaf, which
+  -- is what a test_sets row's exam_id then points at.
   parent_exam_id uuid references public.exams (id) on delete cascade,
   -- Optional uploaded PNG/JPG/WebP (exam-logos Storage bucket below)
   -- shown before the name in the exam/paper list — null falls back to a
@@ -213,7 +216,10 @@ on conflict (id) do nothing;
 
 create table public.test_sets (
   id uuid primary key default gen_random_uuid(),
-  -- Always a paper-level exam row (parent_exam_id is not null on it).
+  -- Always a LEAF exams row — whatever level that happens to be (a paper
+  -- with no sections under it, or the deepest section if the admin added
+  -- some). The app decides "leaf" purely by whether the node has any
+  -- children, not by depth, so this isn't fixed to any one level.
   exam_id uuid not null references public.exams (id) on delete cascade,
   type text not null check (type in ('mock_test', 'pyq')),
   -- Every list this set actually shows up in — always at least [type],
