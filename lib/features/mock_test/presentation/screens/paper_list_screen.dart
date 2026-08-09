@@ -49,7 +49,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
       _error = null;
     });
     try {
-      final papers = await _repository.fetchPapers(widget.parent.id);
+      final papers = await _repository.fetchPapers(widget.parent.id, widget.type);
       if (!mounted) return;
       setState(() {
         _papers = papers;

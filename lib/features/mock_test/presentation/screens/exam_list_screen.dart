@@ -39,7 +39,7 @@ class _ExamListScreenState extends State<ExamListScreen> {
       _error = null;
     });
     try {
-      final exams = await _repository.fetchTopLevelExams();
+      final exams = await _repository.fetchTopLevelExams(widget.type);
       if (!mounted) return;
       setState(() {
         _exams = exams;

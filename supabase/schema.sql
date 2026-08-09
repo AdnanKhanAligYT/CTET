@@ -197,7 +197,13 @@ create table public.exams (
   -- plain default icon in the app.
   logo_url text,
   sort_order int not null default 0,
-  active boolean not null default true
+  active boolean not null default true,
+  -- Which flow(s) this node appears under — both by default (matches the
+  -- app's original behaviour, before this column existed, of always
+  -- showing every node in both). The admin tool's checkboxes let a node
+  -- be scoped to just one. Fetches filter with `.contains('types', ...)`,
+  -- same pattern as test_sets.types.
+  types text[] not null default array['mock_test', 'pyq']
 );
 
 create index exams_parent_idx on public.exams (parent_exam_id);
