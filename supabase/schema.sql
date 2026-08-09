@@ -197,18 +197,10 @@ create table public.exams (
   -- plain default icon in the app.
   logo_url text,
   sort_order int not null default 0,
-  active boolean not null default true,
-  -- At most one exams row app-wide can be true — enforced below by a
-  -- partial unique index (same pattern as attempts_in_progress_unique).
-  -- The dashboard shows this node as a one-tap shortcut above the Mock
-  -- Test tile, set from ctet_content_admin.php's Exams tab.
-  is_shortcut boolean not null default false
+  active boolean not null default true
 );
 
 create index exams_parent_idx on public.exams (parent_exam_id);
-
-create unique index exams_shortcut_unique on public.exams (is_shortcut)
-  where is_shortcut;
 
 alter table public.exams enable row level security;
 create policy "exams: read for signed-in students" on public.exams
@@ -280,6 +272,29 @@ create policy "test_set_questions: read for signed-in students" on public.test_s
 insert into storage.buckets (id, name, public)
 values ('test-set-logos', 'test-set-logos', true)
 on conflict (id) do nothing;
+
+-- Per-student shortcut — unlike everything else on this catalog (admin-
+-- managed, read-only from the app), a student sets and clears this
+-- themselves from a leaf node's own screen (TestSetListScreen's star
+-- icon). user_id as the primary key means exactly one row per student, so
+-- setting a new shortcut always replaces whichever one they had before —
+-- no separate "clear the old one first" step needed, a plain upsert does
+-- it. exam_id isn't restricted to leaf nodes at the DB level (the app UI
+-- only ever offers the toggle on a leaf screen, so nothing else writes
+-- here), same trust boundary as the app's own leaf/folder navigation.
+create table public.student_shortcuts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  exam_id uuid not null references public.exams (id) on delete cascade,
+  -- Which flow the student was browsing (Mock Test vs PYQ) when they set
+  -- this — the same leaf node can hold test sets of both types, so the
+  -- dashboard needs this to know which list to open straight into.
+  type text not null check (type in ('mock_test', 'pyq')),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.student_shortcuts enable row level security;
+create policy "student_shortcuts: own row" on public.student_shortcuts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ── Resumable, unlimited-retake attempts on a named test set ──
 -- (daily due-today practice via take_test.php-equivalent keeps using the

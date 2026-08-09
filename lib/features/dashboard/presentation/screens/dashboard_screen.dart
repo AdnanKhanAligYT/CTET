@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import '../../../../core/models/exam_node.dart';
-import '../../../../core/models/test_set.dart';
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../mock_test/data/exam_catalog_repository.dart';
+import '../../../mock_test/data/student_shortcut_repository.dart';
 import '../../../mock_test/presentation/exam_navigation.dart';
 
 /// Home screen: profile summary up top, the study-tool quick-link tiles
@@ -26,7 +26,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final _examRepository = ExamCatalogRepository();
-  ExamNode? _shortcut;
+  final _shortcutRepository = StudentShortcutRepository();
+  StudentShortcut? _shortcut;
   bool _opening = false;
 
   @override
@@ -40,8 +41,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // silently showing no shortcut (same as "none set") is an acceptable
   // fallback.
   Future<void> _loadShortcut() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
     try {
-      final shortcut = await _examRepository.fetchShortcut();
+      final shortcut = await _shortcutRepository.fetchMyShortcut(uid);
       if (!mounted) return;
       setState(() => _shortcut = shortcut);
     } catch (_) {
@@ -57,8 +60,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       await navigateIntoExamNode(
         context: context,
         repository: _examRepository,
-        node: shortcut,
-        type: TestSetType.mockTest,
+        node: shortcut.node,
+        type: shortcut.type,
       );
     } catch (e) {
       if (!mounted) return;
@@ -127,7 +130,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _QuickLinkTile(
                       icon: Icons.bolt,
                       color: AppColors.tileMockTest,
-                      title: _shortcut!.name,
+                      title: _shortcut!.node.name,
                       subtitle: 'Shortcut — seedha yahan pahunch jao',
                       onTap: _openShortcut,
                     ),

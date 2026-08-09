@@ -8,6 +8,7 @@ import '../../../../core/models/test_set.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
+import '../../data/student_shortcut_repository.dart';
 import '../../data/test_set_repository.dart';
 import 'named_test_screen.dart';
 
@@ -28,15 +29,19 @@ class TestSetListScreen extends StatefulWidget {
 
 class _TestSetListScreenState extends State<TestSetListScreen> {
   final _repository = TestSetRepository();
+  final _shortcutRepository = StudentShortcutRepository();
   bool _loading = true;
   String? _error;
   List<TestSet> _sets = const [];
   bool _opening = false;
+  bool _isMyShortcut = false;
+  bool _togglingShortcut = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadShortcutState();
   }
 
   Future<void> _load() async {
@@ -59,6 +64,61 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
       });
     }
   }
+
+  // Separate from _load() (the test-set list itself) — a failure here just
+  // means the star silently stays unfilled, no reason to block or error out
+  // the whole screen over it.
+  Future<void> _loadShortcutState() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final shortcut = await _shortcutRepository.fetchMyShortcut(uid);
+      if (!mounted) return;
+      final matches =
+          shortcut != null &&
+          shortcut.node.id == widget.paper.id &&
+          shortcut.type == widget.type;
+      setState(() => _isMyShortcut = matches);
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _toggleShortcut() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null || _togglingShortcut) return;
+    setState(() => _togglingShortcut = true);
+    try {
+      if (_isMyShortcut) {
+        await _shortcutRepository.unsetMyShortcut(uid);
+      } else {
+        await _shortcutRepository.setMyShortcut(
+          uid,
+          widget.paper.id,
+          widget.type,
+        );
+      }
+      if (!mounted) return;
+      setState(() => _isMyShortcut = !_isMyShortcut);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _togglingShortcut = false);
+    }
+  }
+
+  List<Widget> get _shortcutActions => [
+    IconButton(
+      icon: Icon(_isMyShortcut ? Icons.star : Icons.star_border),
+      tooltip: _isMyShortcut
+          ? 'Shortcut hai (hatane ke liye dabao)'
+          : 'Mera Shortcut Bana Do',
+      onPressed: _togglingShortcut ? null : _toggleShortcut,
+    ),
+  ];
 
   Future<void> _open(TestSet set) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
@@ -127,20 +187,29 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.paper.name)),
+        appBar: AppBar(
+          title: Text(widget.paper.name),
+          actions: _shortcutActions,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.paper.name)),
+        appBar: AppBar(
+          title: Text(widget.paper.name),
+          actions: _shortcutActions,
+        ),
         body: LoadError(message: _error!, onRetry: _load),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.paper.name)),
+      appBar: AppBar(
+        title: Text(widget.paper.name),
+        actions: _shortcutActions,
+      ),
       body: SafeArea(
         child: _sets.isEmpty
             ? const Center(
