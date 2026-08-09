@@ -26,6 +26,8 @@ class NotificationService {
 
   static const _dueReviewsNotificationId = 1000;
   static const _weeklySummaryNotificationId = 1001;
+  static const _dailyGoalNotificationId = 1002;
+  static const _streakNotificationId = 1003;
   // Timetable blocks get ids starting here, one per block, so
   // rescheduling can cancel exactly the old set without touching the
   // fixed ids above.
@@ -53,6 +55,8 @@ class NotificationService {
 
     await _scheduleDueReviewsReminder();
     await _scheduleWeeklySummaryReminder();
+    await _scheduleDailyGoalReminder();
+    await _scheduleStreakReminder();
   }
 
   /// Daily nudge — kept as a fixed 8 AM prompt rather than a live due-count
@@ -80,6 +84,36 @@ class NotificationService {
       notificationDetails: _details(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
+  }
+
+  /// Afternoon nudge toward the student's daily practice target — same
+  /// fixed-text, always-fires approach as the reminders above (no per-user
+  /// progress lookup, so it's honest either way: a student who already hit
+  /// their goal just sees an extra tap-through, not a wrong number).
+  static Future<void> _scheduleDailyGoalReminder() async {
+    await _localNotifications.zonedSchedule(
+      id: _dailyGoalNotificationId,
+      title: 'Aaj ka target pura hua?',
+      body: 'Thodi der nikaal ke aaj ka practice goal pura kar lo.',
+      scheduledDate: _nextInstanceOf(hour: 13, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  /// Late-evening last-chance nudge so a day doesn't slip by with zero
+  /// practice.
+  static Future<void> _scheduleStreakReminder() async {
+    await _localNotifications.zonedSchedule(
+      id: _streakNotificationId,
+      title: 'Apna streak mat todo!',
+      body: 'Agar aaj abhi tak practice nahi kiya, toh ek test abhi kar lo.',
+      scheduledDate: _nextInstanceOf(hour: 21, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
