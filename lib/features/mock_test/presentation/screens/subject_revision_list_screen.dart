@@ -1,29 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/question.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
 import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
 
 /// Behind the dashboard's "Subject Wise Revision" tile — the subject list
 /// isn't admin-managed, it's derived on the fly from whatever questions
-/// already exist (for the student's selected exams), so it always matches
-/// the data that's actually been uploaded. Tapping a subject jumps
+/// already exist, so it always matches the data that's actually been
+/// uploaded (see MockTestRepository.fetchAllQuestions for why this isn't
+/// scoped to the student's own exam selection). Tapping a subject jumps
 /// straight into TakeTestScreen for that subject.
-class SubjectRevisionListScreen extends ConsumerStatefulWidget {
+class SubjectRevisionListScreen extends StatefulWidget {
   const SubjectRevisionListScreen({super.key});
 
   @override
-  ConsumerState<SubjectRevisionListScreen> createState() =>
+  State<SubjectRevisionListScreen> createState() =>
       _SubjectRevisionListScreenState();
 }
 
 class _SubjectRevisionListScreenState
-    extends ConsumerState<SubjectRevisionListScreen> {
+    extends State<SubjectRevisionListScreen> {
   final _repository = MockTestRepository();
   bool _loading = true;
   String? _errorMessage;
@@ -41,18 +40,7 @@ class _SubjectRevisionListScreenState
       _errorMessage = null;
     });
     try {
-      final profile = await ref.read(userProfileProvider.future);
-      final exams = profile?.exams ?? const [];
-      if (exams.isEmpty) {
-        setState(() {
-          _loading = false;
-          _errorMessage =
-              'No exam selected yet — pick one in Edit Profile first.';
-        });
-        return;
-      }
-
-      final questions = await _repository.fetchQuestionsForExams(exams);
+      final questions = await _repository.fetchAllQuestions();
       final bySubject = <String, List<Question>>{};
       for (final question in questions) {
         if (question.subject.isEmpty) continue;
@@ -98,10 +86,7 @@ class _SubjectRevisionListScreenState
               children: [
                 Text(_errorMessage!, textAlign: TextAlign.center),
                 const SizedBox(height: 16),
-                PrimaryButton(
-                  label: 'Go to Profile',
-                  onPressed: () => context.push('/profile/edit'),
-                ),
+                PrimaryButton(label: 'Retry', onPressed: _load),
               ],
             ),
           ),
