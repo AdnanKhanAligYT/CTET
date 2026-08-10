@@ -15,10 +15,17 @@ class MockTestRepository {
 
   Future<List<Question>> fetchQuestionsForExams(List<String> exams) async {
     if (exams.isEmpty) return const [];
+    // exam_tags is tagged generically ("CTET") rather than per-paper —
+    // see SyllabusRepository.fetchTopicsForExams for the same reasoning.
+    final lookupExams = {
+      ...exams,
+      for (final e in exams)
+        if (e.contains('CTET')) 'CTET',
+    }.toList();
     final rows = await _client
         .from('questions')
         .select()
-        .overlaps('exam_tags', exams);
+        .overlaps('exam_tags', lookupExams);
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
