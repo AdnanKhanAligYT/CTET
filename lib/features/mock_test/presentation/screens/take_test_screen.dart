@@ -18,21 +18,27 @@ import 'test_result_screen.dart';
 /// Mirrors `take_test.php` from the reference app: with no [subject], it's
 /// always just today's due questions (new + anything whose revision date
 /// has arrived), scoped to the student's selected exams, in mixed order.
-/// With a [subject] (Subject Wise Revision, launched from the dashboard's
-/// subject list), it instead pulls from every uploaded question with that
-/// subject regardless of exam selection (see
-/// MockTestRepository.fetchAllQuestions) and queues them in card-stack
-/// order (see the sort in `_load()`), so revision isn't blocked by the
+/// With a [subject] (Subject Wise Revision, launched via
+/// SubjectBlockListScreen), it instead pulls from every uploaded question
+/// with that subject regardless of exam selection (see
+/// MockTestRepository.fetchAllQuestions), narrows to just [block]'s fixed
+/// chunk-of-N slice (id-sorted, so "CDP 1st" always means the same ~30
+/// questions), and queues them in card-stack order within that slice
+/// (see the sort in `_load()`), so revision isn't blocked by the
 /// spaced-repetition schedule or by exam scoping. Either way: instant
 /// feedback + explanation the moment an option is picked, answers locked
 /// once chosen, and a choice after each question to continue or stop and
 /// see the result.
 class TakeTestScreen extends ConsumerStatefulWidget {
-  const TakeTestScreen({super.key, this.subject});
+  const TakeTestScreen({super.key, this.subject, this.block});
 
   /// When set, this is a Subject Wise Revision run for this subject rather
   /// than the daily due-today practice.
   final String? subject;
+
+  /// Which chunk-of-N block within [subject] to run (0-indexed) — see
+  /// SubjectBlockListScreen. Ignored when [subject] is null.
+  final int? block;
 
   @override
   ConsumerState<TakeTestScreen> createState() => _TakeTestScreenState();
@@ -97,16 +103,34 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     // MockTestRepository.fetchAllQuestions for why.
     final allQuestions = await _repository.fetchAllQuestions();
     final progress = await _repository.fetchProgress(user.id);
-    final subjectQuestions = dedupeByText(
+    var subjectQuestions = dedupeByText(
       allQuestions.where((q) => q.subject == subject).toList(),
     );
-    // Card-stack behaviour: never-attempted questions come first; the
-    // moment one is answered its lastReviewedAt becomes "now", which
-    // sorts it to the very back next time this list is built. Once every
-    // question in the subject has been attempted at least once, this
-    // same ascending sort naturally starts from the least-recently-
-    // attempted one again — the cycle restarts on its own, no separate
-    // "cycle complete" bookkeeping needed.
+
+    final block = widget.block;
+    if (block != null) {
+      // Block membership must stay stable across visits — "CDP 1st"
+      // always means the same ~30 questions — so slice by a fixed key
+      // (id) rather than anything that could shift between loads.
+      subjectQuestions.sort((a, b) => a.id.compareTo(b.id));
+      final chunkSize = chunkSizeForSubject(subject);
+      final start = block * chunkSize;
+      subjectQuestions = start < subjectQuestions.length
+          ? subjectQuestions.sublist(
+              start,
+              (start + chunkSize).clamp(0, subjectQuestions.length),
+            )
+          : [];
+    }
+
+    // Card-stack behaviour, within whichever pool this ended up being
+    // (the whole subject, or just the selected block): never-attempted
+    // questions come first; the moment one is answered its
+    // lastReviewedAt becomes "now", which sorts it to the very back next
+    // time this list is built. Once every question has been attempted at
+    // least once, this same ascending sort naturally restarts from the
+    // least-recently-attempted one — the cycle repeats on its own, no
+    // separate "cycle complete" bookkeeping needed.
     final selected = subjectQuestions
       ..sort((a, b) {
         final aTime = progress[a.id]?.lastReviewedAt;

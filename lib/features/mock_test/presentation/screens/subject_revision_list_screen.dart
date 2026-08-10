@@ -131,7 +131,7 @@ class _SubjectRevisionListScreenState
                       subtitle: Text('${entry.value} questions'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(
-                        '/mock-test/take?subject=${Uri.encodeComponent(entry.key)}',
+                        '/mock-test/subjects/blocks?subject=${Uri.encodeComponent(entry.key)}',
                       ),
                     ),
                   );
