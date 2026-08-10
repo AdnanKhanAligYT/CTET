@@ -5,12 +5,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import '../../../../core/models/exam_catalog.dart';
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../mock_test/data/exam_catalog_repository.dart';
 import '../../application/profile_controller.dart';
 
 /// Single screen reused for both first-time profile setup (right after
@@ -577,7 +577,34 @@ class _ExamPickerSheet extends StatefulWidget {
 }
 
 class _ExamPickerSheetState extends State<_ExamPickerSheet> {
+  final _repository = ExamCatalogRepository();
   late final List<String> _selected = List.of(widget.initiallySelected);
+  bool _loading = true;
+  String? _error;
+  List<String> _examOptions = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final names = await _repository.fetchTopLevelExamNames();
+      if (!mounted) return;
+      setState(() {
+        _examOptions = names;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -593,26 +620,43 @@ class _ExamPickerSheetState extends State<_ExamPickerSheet> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: examCatalog.map((exam) {
-                final selected = _selected.contains(exam);
-                return FilterChip(
-                  label: Text(exam),
-                  selected: selected,
-                  onSelected: (value) {
-                    setState(() {
-                      if (value) {
-                        _selected.add(exam);
-                      } else {
-                        _selected.remove(exam);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
-            ),
+            // Fetched fresh from the admin-managed catalog every time this
+            // sheet opens (rather than a hardcoded list) — the choices
+            // offered here always match whatever exams the admin has
+            // actually added content for.
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              )
+            else if (_examOptions.isEmpty)
+              const Text('Abhi koi exam add nahi hua hai.')
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _examOptions.map((exam) {
+                  final selected = _selected.contains(exam);
+                  return FilterChip(
+                    label: Text(exam),
+                    selected: selected,
+                    onSelected: (value) {
+                      setState(() {
+                        if (value) {
+                          _selected.add(exam);
+                        } else {
+                          _selected.remove(exam);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Done',

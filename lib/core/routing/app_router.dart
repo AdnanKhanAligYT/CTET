@@ -26,6 +26,7 @@ import '../models/exam_node.dart';
 import '../models/test_attempt.dart';
 import '../models/test_set.dart';
 import 'go_router_refresh_stream.dart';
+import 'route_observer.dart';
 
 // Only '/welcome' is bounced away from once logged in — this exists purely
 // to skip straight past the welcome screen on a cold start when a session
@@ -58,6 +59,7 @@ const _requiresAuth = [
 
 final appRouter = GoRouter(
   initialLocation: '/welcome',
+  navigatorObservers: [routeObserver],
   refreshListenable: GoRouterRefreshStream(
     Supabase.instance.client.auth.onAuthStateChange,
   ),

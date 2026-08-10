@@ -249,6 +249,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
     final question = _currentQuestion;
     final subjectStyle = subjectStyleFor(question.subject);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -281,10 +282,22 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(question.text, style: Theme.of(context).textTheme.titleMedium),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Q${_currentIndex + 1}. ',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  TextSpan(text: question.text),
+                ],
+              ),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 20),
             for (var i = 0; i < question.options.length; i++)
               _OptionTile(
+                letter: _optionLetter(i),
                 text: question.options[i],
                 state: _optionState(question, i),
                 onTap: () => _selectOption(i),
@@ -294,17 +307,41 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color:
-                      (Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.darkSurface
-                              : AppColors.lightSurface)
-                          .withValues(alpha: 0.6),
-                  border: Border.all(color: Theme.of(context).dividerColor),
+                  color: (isDark ? Colors.indigo.shade900 : Colors.indigo.shade50)
+                      .withValues(alpha: isDark ? 0.35 : 1),
+                  border: Border.all(color: Colors.indigo.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  question.explanationFor(_selectedOption!),
-                  style: Theme.of(context).textTheme.bodyMedium,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline,
+                          size: 18,
+                          color: isDark
+                              ? Colors.indigo.shade200
+                              : Colors.indigo.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Explanation',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? Colors.indigo.shade200
+                                : Colors.indigo.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      question.explanationFor(_selectedOption!),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -339,13 +376,18 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
 enum _OptionVisualState { neutral, correct, wrong, disabled }
 
+/// A/B/C/D/... for option index [i] (0 = A, 1 = B, ...).
+String _optionLetter(int i) => String.fromCharCode(65 + i);
+
 class _OptionTile extends StatelessWidget {
   const _OptionTile({
+    required this.letter,
     required this.text,
     required this.state,
     required this.onTap,
   });
 
+  final String letter;
   final String text;
   final _OptionVisualState state;
   final VoidCallback onTap;
@@ -355,6 +397,7 @@ class _OptionTile extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     Color borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
     Color? fillColor;
+    Color badgeColor = isDark ? AppColors.navyLight : AppColors.navy;
     IconData? icon;
 
     switch (state) {
@@ -363,14 +406,19 @@ class _OptionTile extends StatelessWidget {
       case _OptionVisualState.correct:
         borderColor = Colors.green;
         fillColor = Colors.green.withValues(alpha: 0.12);
+        badgeColor = Colors.green;
         icon = Icons.check_circle;
         break;
       case _OptionVisualState.wrong:
         borderColor = AppColors.error;
         fillColor = AppColors.error.withValues(alpha: 0.12);
+        badgeColor = AppColors.error;
         icon = Icons.cancel;
         break;
       case _OptionVisualState.disabled:
+        badgeColor = isDark
+            ? AppColors.darkTextSecondary
+            : AppColors.lightTextSecondary;
         break;
     }
 
@@ -390,9 +438,37 @@ class _OptionTile extends StatelessWidget {
             color: fillColor,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(text)),
-              if (icon != null) Icon(icon, color: borderColor, size: 20),
+              CircleAvatar(
+                radius: 13,
+                backgroundColor: badgeColor,
+                child: Text(
+                  letter,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                  ),
+                ),
+              ),
+              if (icon != null) ...[
+                const SizedBox(width: 8),
+                Icon(icon, color: borderColor, size: 20),
+              ],
             ],
           ),
         ),

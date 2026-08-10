@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/routing/route_observer.dart';
 import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -24,7 +25,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with RouteAware {
   final _examRepository = ExamCatalogRepository();
   final _shortcutRepository = StudentShortcutRepository();
   StudentShortcut? _shortcut;
@@ -33,6 +35,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadShortcut();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) routeObserver.subscribe(this, route);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  // Fires when a screen pushed on top of this one (e.g. the star toggle
+  // on TestSetListScreen) gets popped and Dashboard becomes visible
+  // again — without this, a just-set/just-cleared shortcut only showed
+  // up after a full app restart, since initState() never re-runs for a
+  // widget that's still alive further down the stack.
+  @override
+  void didPopNext() {
     _loadShortcut();
   }
 

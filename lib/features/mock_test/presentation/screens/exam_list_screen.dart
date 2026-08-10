@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_node.dart';
@@ -6,22 +7,25 @@ import '../../../../core/models/test_set.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
+import '../../../profile/application/profile_controller.dart';
 import '../../data/exam_catalog_repository.dart';
 
 /// First screen behind both the "Mock Test" and "Previous Year Questions"
 /// dashboard tiles — same screen, same data source, just a different
 /// [type] so the next screen (PaperListScreen -> TestSetListScreen) knows
-/// which list of test sets to eventually show.
-class ExamListScreen extends StatefulWidget {
+/// which list of test sets to eventually show. Scoped to the student's
+/// own exam selection (profile.exams) — someone preparing only for CTET
+/// Paper 1 shouldn't have to wade through every other state's TET here.
+class ExamListScreen extends ConsumerStatefulWidget {
   const ExamListScreen({super.key, required this.type});
 
   final TestSetType type;
 
   @override
-  State<ExamListScreen> createState() => _ExamListScreenState();
+  ConsumerState<ExamListScreen> createState() => _ExamListScreenState();
 }
 
-class _ExamListScreenState extends State<ExamListScreen> {
+class _ExamListScreenState extends ConsumerState<ExamListScreen> {
   final _repository = ExamCatalogRepository();
   bool _loading = true;
   String? _error;
@@ -39,7 +43,11 @@ class _ExamListScreenState extends State<ExamListScreen> {
       _error = null;
     });
     try {
-      final exams = await _repository.fetchTopLevelExams(widget.type);
+      final profile = await ref.read(userProfileProvider.future);
+      final exams = await _repository.fetchTopLevelExams(
+        widget.type,
+        allowedNames: profile?.exams,
+      );
       if (!mounted) return;
       setState(() {
         _exams = exams;
@@ -82,7 +90,7 @@ class _ExamListScreenState extends State<ExamListScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
-                    'Abhi koi exam add nahi hua hai.',
+                    'Aapke chune hue exam(s) ke liye abhi kuch add nahi hua hai.',
                     textAlign: TextAlign.center,
                   ),
                 ),
