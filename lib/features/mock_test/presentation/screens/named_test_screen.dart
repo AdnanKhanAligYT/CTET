@@ -11,7 +11,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/test_set_repository.dart';
-import '../subject_style.dart';
 
 /// Bundles what NamedTestScreen needs from the previous screen — the set
 /// being started, and (if the student chose "Resume Karo" on an existing
@@ -202,58 +201,7 @@ class _NamedTestScreenState extends State<NamedTestScreen>
     }
   }
 
-  // Is [question] the last one in a chunk-of-N block within its own
-  // subject (30 questions by default, 60 for SST — see
-  // chunkSizeForSubject)? Purely a rest-point marker; doesn't change
-  // what happens if the student keeps going.
-  bool _isBlockBoundary(Question question) {
-    final subjectQuestions = _subjectQuestions[question.subject] ?? const [];
-    final position = subjectQuestions.indexOf(question) + 1;
-    if (position <= 0) return false;
-    return position % chunkSizeForSubject(question.subject) == 0;
-  }
-
-  // true = keep going, false = stop here and submit, null = dialog was
-  // dismissed without a choice (stay right where they are).
-  Future<bool?> _showBlockCheckpoint(Question question) {
-    final chunkSize = chunkSizeForSubject(question.subject);
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('$chunkSize questions poore hue'),
-        content: Text(
-          '${question.subject} mein aapne $chunkSize questions poore kar liye hain. Aage badhna hai ya yahin test submit karna hai?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Yahin Submit Karo'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Aage Badho'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _next() async {
-    final justAnswered = _feedbackQuestion;
-    // Skip the checkpoint once nothing remains to continue to — the
-    // "Saare subjects poore ho gaye" screen right after already covers
-    // that moment, a second prompt would just be redundant.
-    if (justAnswered != null &&
-        !_allSubjectsComplete &&
-        _isBlockBoundary(justAnswered)) {
-      final keepGoing = await _showBlockCheckpoint(justAnswered);
-      if (keepGoing == false) {
-        _finish();
-        return;
-      }
-      if (keepGoing != true) return; // dismissed — stay on this screen
-    }
-    if (!mounted) return;
+  void _next() {
     setState(() {
       _feedbackQuestion = null;
       _feedbackSelection = null;
@@ -344,60 +292,8 @@ class _NamedTestScreenState extends State<NamedTestScreen>
               currentIndex: _currentSubjectIndex,
               onSelected: _jumpToSubject,
             ),
-            _buildBlockProgress(),
             Expanded(child: _buildBody()),
           ],
-        ),
-      ),
-    );
-  }
-
-  // Purely visual — chunk-of-N progress chips for the subject currently
-  // open, so the student can see how far into the current block they
-  // are. Doesn't drive any test logic; _isBlockBoundary/_next() above
-  // are the only things that actually act on the chunk size.
-  Widget _buildBlockProgress() {
-    final questions = _currentSubjectQuestions;
-    if (questions.isEmpty) return const SizedBox.shrink();
-    final subject = _testSet.subjects[_currentSubjectIndex];
-    final chunkSize = chunkSizeForSubject(subject);
-    final blockCount = (questions.length / chunkSize).ceil();
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          for (var block = 0; block < blockCount; block++)
-            _buildBlockChip(questions, block, chunkSize),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBlockChip(List<Question> questions, int block, int chunkSize) {
-    final start = block * chunkSize;
-    final end = (start + chunkSize).clamp(0, questions.length);
-    final slice = questions.sublist(start, end);
-    final done = slice.where((q) => _answers.containsKey(q.id)).length;
-    final complete = done == slice.length;
-
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: complete ? Colors.green.withValues(alpha: 0.12) : null,
-        border: Border.all(
-          color: complete ? Colors.green : Theme.of(context).dividerColor,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '${start + 1}–$end: $done/${slice.length}',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: complete ? Colors.green.shade800 : null,
         ),
       ),
     );
