@@ -74,3 +74,15 @@ SubjectStyle subjectStyleFor(String subject) {
   final hash = normalized.codeUnits.fold<int>(0, (sum, c) => sum + c);
   return _fallbackPalette[hash % _fallbackPalette.length];
 }
+
+/// Question-count "block" size for the exam-wise Mock Test/PYQ checkpoint
+/// (see NamedTestScreen) — a purely-visual rest point every N questions
+/// within a subject, plus a confirm-to-continue prompt there. SST papers
+/// run about double the length of the others, so it gets 60 instead of
+/// the default 30.
+int chunkSizeForSubject(String subject) {
+  final normalized = subject.toLowerCase().trim();
+  const sstKeywords = ['sst', 'social studies', 'social science'];
+  if (sstKeywords.any(normalized.contains)) return 60;
+  return 30;
+}

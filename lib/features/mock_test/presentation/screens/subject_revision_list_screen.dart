@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/models/question.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
+import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
 
 /// Behind the dashboard's "Subject Wise Revision" tile — the subject list
@@ -51,13 +53,19 @@ class _SubjectRevisionListScreenState
       }
 
       final questions = await _repository.fetchQuestionsForExams(exams);
-      final counts = <String, int>{};
+      final bySubject = <String, List<Question>>{};
       for (final question in questions) {
         if (question.subject.isEmpty) continue;
-        counts[question.subject] = (counts[question.subject] ?? 0) + 1;
+        bySubject.putIfAbsent(question.subject, () => []).add(question);
       }
-      final entries = counts.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
+      // Deduped per subject (same rule TakeTestScreen applies when it
+      // actually builds the run) so the count shown here always matches
+      // how many unique questions the student will actually see.
+      final entries =
+          bySubject.entries
+              .map((e) => MapEntry(e.key, dedupeByText(e.value).length))
+              .toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
 
       if (!mounted) return;
       setState(() {

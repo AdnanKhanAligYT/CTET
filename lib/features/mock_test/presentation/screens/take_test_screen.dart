@@ -11,6 +11,7 @@ import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
+import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
 import 'test_result_screen.dart';
 
@@ -91,7 +92,10 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
       // this same ascending sort naturally starts from the
       // least-recently-attempted one again — the cycle restarts on its
       // own, no separate "cycle complete" bookkeeping needed.
-      selected = allQuestions.where((q) => q.subject == subject).toList()
+      final subjectQuestions = dedupeByText(
+        allQuestions.where((q) => q.subject == subject).toList(),
+      );
+      selected = subjectQuestions
         ..sort((a, b) {
           final aTime = progress[a.id]?.lastReviewedAt;
           final bTime = progress[b.id]?.lastReviewedAt;
