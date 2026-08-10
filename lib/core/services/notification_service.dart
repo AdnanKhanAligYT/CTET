@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -28,10 +30,47 @@ class NotificationService {
   static const _weeklySummaryNotificationId = 1001;
   static const _dailyGoalNotificationId = 1002;
   static const _streakNotificationId = 1003;
+  static const _examCountdownNotificationId = 1004;
+  static const _motivationalMorningId = 1005;
+  static const _motivationalEveningId = 1006;
   // Timetable blocks get ids starting here, one per block, so
   // rescheduling can cancel exactly the old set without touching the
   // fixed ids above.
   static const _timetableNotificationIdBase = 2000;
+
+  static final _random = Random();
+  static bool _dynamicRemindersRefreshedThisSession = false;
+
+  // WhatsApp-forward-style Hinglish nudges — picked at random (see
+  // _randomQuote()) whenever the motivational slots get (re)scheduled,
+  // so it's not the same line every single day.
+  static const _motivationalQuotes = [
+    'Ek question solve kar lo, kal khud ko thank karoge. 💪',
+    'Padhai se bhagoge toh kya kar paoge? Saamna karo, aaj hi.',
+    '5 minute ka break le ke wapas aa jao — phone band, kitab open. 📖',
+    'Jo aaj mehnat nahi karega, kal ka result usi se sawal karega.',
+    'Bas ek chapter aur — tum ruk nahi sakte, tumhara sapna ruk nahi sakta.',
+    'Teacher banna hai na? Toh aaj ka ek topic mat chhodo.',
+    'Mushkil waqt mein padhne wale hi asaan waqt mein muskurate hain.',
+    'Aaj ka 1 ghanta, kal ki 1 naukri tay karega.',
+    'Comparison chhodo, apna best do — bas aaj, bas abhi.',
+    'Result exam wale din nahi banta, aaj ke din se banta hai.',
+    'Thoda aur padh lo — CTET clear karne wale bhi tumhare jaise hi the.',
+    'Notifications scroll karne ka time, ek MCQ solve karne mein laga do.',
+    'Jo log padhai ko priority nahi dete, unhe naukri bhi priority nahi deti.',
+    'Aaj ka din waapas nahi aayega — padh lo, warna pachhtaoge.',
+    'Chhoti si consistency, bade result deti hai. Aaj bhi padho.',
+    'Doubt hai toh clear karo, ignore mat karo — kal exam mein wahi aayega.',
+    'Tumhare competitors abhi bhi padh rahe hain — tum kya kar rahe ho?',
+    'Ek revision aaj kar lo, exam ke din tension kam hogi.',
+    'Mehnat dikhti nahi, lekin result zaroor dikhta hai. Lage raho.',
+    'CTET sirf exam nahi, tumhara pehla kadam hai teacher banne ka — usse mat todo.',
+    'Aalas ek minute ka sukoon deta hai, mehnat zindagi bhar ka sukoon deti hai.',
+    'Abhi nahi toh kabhi nahi — chalo, ek test attempt karo.',
+  ];
+
+  static String _randomQuote() =>
+      _motivationalQuotes[_random.nextInt(_motivationalQuotes.length)];
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -111,6 +150,72 @@ class NotificationService {
       title: 'Apna streak mat todo!',
       body: 'Agar aaj abhi tak practice nahi kiya, toh ek test abhi kar lo.',
       scheduledDate: _nextInstanceOf(hour: 21, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  /// Re-picks the two motivational quotes and refreshes the exam
+  /// countdown's day count — call once per app open (see HomeGate), not
+  /// on every rebuild; the session-level guard keeps repeat calls (e.g.
+  /// navigating back to Dashboard) from redoing this pointlessly. Like
+  /// the fixed reminders above, the text only actually updates the next
+  /// time this runs — there's no background service to refresh it
+  /// mid-day, so "today" effectively means "as of the last app open".
+  static Future<void> refreshDynamicReminders({DateTime? examDate}) async {
+    if (_dynamicRemindersRefreshedThisSession) return;
+    _dynamicRemindersRefreshedThisSession = true;
+    await _scheduleMotivationalReminders();
+    await _scheduleExamCountdownReminder(examDate);
+  }
+
+  static Future<void> _scheduleMotivationalReminders() async {
+    await _localNotifications.zonedSchedule(
+      id: _motivationalMorningId,
+      title: 'CTET Prep',
+      body: _randomQuote(),
+      scheduledDate: _nextInstanceOf(hour: 11, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+    await _localNotifications.zonedSchedule(
+      id: _motivationalEveningId,
+      title: 'CTET Prep',
+      body: _randomQuote(),
+      scheduledDate: _nextInstanceOf(hour: 18, minute: 0),
+      notificationDetails: _details(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  /// [examDate] comes from the admin-set app_settings row (see
+  /// AppSettingsRepository) — null (not set yet) or already-past cancels
+  /// any previously scheduled countdown instead of showing something
+  /// wrong.
+  static Future<void> _scheduleExamCountdownReminder(DateTime? examDate) async {
+    if (examDate == null) {
+      await _localNotifications.cancel(id: _examCountdownNotificationId);
+      return;
+    }
+    final today = DateTime.now();
+    final daysLeft = DateTime(examDate.year, examDate.month, examDate.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    if (daysLeft < 0) {
+      await _localNotifications.cancel(id: _examCountdownNotificationId);
+      return;
+    }
+    final body = daysLeft == 0
+        ? 'Exam aaj hai! Jo taiyari ki hai usi pe bharosa rakho — all the best.'
+        : '$daysLeft din baaki hain — thodi padhai abhi kar lo.';
+    await _localNotifications.zonedSchedule(
+      id: _examCountdownNotificationId,
+      title: 'Exam Countdown',
+      body: body,
+      scheduledDate: _nextInstanceOf(hour: 7, minute: 30),
       notificationDetails: _details(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,

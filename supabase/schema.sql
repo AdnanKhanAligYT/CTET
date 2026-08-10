@@ -374,3 +374,20 @@ create index device_tokens_user_id_idx on public.device_tokens (user_id);
 alter table public.device_tokens enable row level security;
 create policy "device_tokens: own rows" on public.device_tokens
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- app_settings — small admin-managed key/value store
+--
+-- Starts with just the exam countdown date (read by
+-- NotificationService to compute "N din baaki hain" — see
+-- app_settings_repository.dart), but generic enough to hold any other
+-- single global setting later without a new table each time.
+-- ============================================================
+create table public.app_settings (
+  key text primary key,
+  value text
+);
+
+alter table public.app_settings enable row level security;
+create policy "app_settings: read for signed-in students" on public.app_settings
+  for select using (auth.role() = 'authenticated');

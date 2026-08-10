@@ -38,16 +38,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               const Spacer(flex: 3),
               Center(
                 child: Container(
-                  width: 140,
-                  height: 140,
+                  width: 160,
+                  height: 160,
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.navyLight : AppColors.navy,
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(36),
                   ),
-                  child: const Icon(
-                    Icons.emoji_events_rounded,
-                    size: 68,
-                    color: Colors.white,
+                  child: Image.asset(
+                    'assets/icon/icon_foreground.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),

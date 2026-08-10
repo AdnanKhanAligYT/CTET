@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/services/app_settings_repository.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../../profile/presentation/screens/edit_profile_screen.dart';
@@ -35,10 +37,27 @@ class HomeGate extends ConsumerWidget {
         // saved then — this re-tries now that we know a profile loaded,
         // which only happens once actually signed in.
         PushNotificationService.onSignedIn();
+        _refreshDynamicReminders();
         return DashboardScreen(profile: profile);
       },
     );
   }
+}
+
+/// Fire-and-forget, once per app session (see
+/// NotificationService.refreshDynamicReminders) — refreshes the exam
+/// countdown's day count and re-rolls the two motivational quotes.
+/// Failure here (e.g. app_settings not reachable) just means yesterday's
+/// scheduled text sticks around, never a crash.
+void _refreshDynamicReminders() {
+  Future.microtask(() async {
+    try {
+      final examDate = await AppSettingsRepository().fetchExamCountdownDate();
+      await NotificationService.refreshDynamicReminders(examDate: examDate);
+    } catch (_) {
+      // ignore
+    }
+  });
 }
 
 /// Best-effort, fire-and-forget: a profile whose setup completed before
