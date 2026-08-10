@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/services/push_notification_service.dart';
 import '../../../profile/application/profile_controller.dart';
 import '../../../profile/presentation/screens/edit_profile_screen.dart';
 import 'dashboard_screen.dart';
@@ -29,6 +30,11 @@ class HomeGate extends ConsumerWidget {
           return const EditProfileScreen(isFirstTimeSetup: true);
         }
         _backfillGooglePhotoIfMissing(ref, profile);
+        // The FCM token fetched at app-start (main.dart) may have run
+        // before Supabase auth restored the session, so nothing got
+        // saved then — this re-tries now that we know a profile loaded,
+        // which only happens once actually signed in.
+        PushNotificationService.onSignedIn();
         return DashboardScreen(profile: profile);
       },
     );

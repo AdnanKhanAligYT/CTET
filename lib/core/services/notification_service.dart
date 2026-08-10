@@ -148,6 +148,21 @@ class NotificationService {
     }
   }
 
+  /// Shows an already-initialized local notification immediately — used
+  /// by PushNotificationService to display an admin-sent push while the
+  /// app is in the foreground (Android/iOS don't auto-show a system
+  /// notification for a foreground FCM message the way they do when the
+  /// app is backgrounded/terminated). Reuses this same plugin
+  /// instance/channel rather than standing up a second one.
+  static Future<void> showNow({required String title, required String body}) {
+    return _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      _details(),
+    );
+  }
+
   static NotificationDetails _details() {
     return NotificationDetails(
       android: AndroidNotificationDetails(

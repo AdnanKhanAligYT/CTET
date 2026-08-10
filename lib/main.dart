@@ -9,6 +9,7 @@ import 'core/models/user_profile.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/ad_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'features/profile/application/profile_controller.dart';
@@ -19,21 +20,26 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.anonKey,
   );
+  var firebaseReady = false;
   try {
-    // Only used for the Mobile OTP bridge (see
-    // core/services/firebase_phone_auth_service.dart) — everything else in
+    // Used for the Mobile OTP bridge (see
+    // core/services/firebase_phone_auth_service.dart) and admin-sent push
+    // notifications (see PushNotificationService) — everything else in
     // the app is Supabase. Fails silently until google-services.json is
-    // added (see README "Set up Mobile OTP"); Mobile Number sign-in just
-    // won't work until then, nothing else is affected.
+    // added (see README "Set up Mobile OTP"); Mobile Number sign-in and
+    // push notifications just won't work until then, nothing else is
+    // affected.
     await Firebase.initializeApp();
+    firebaseReady = true;
   } catch (_) {
     // ignore
   }
-  // Ads and notification setup never block startup: neither call is
-  // awaited, so a slow/unreachable network only delays those features,
-  // not the whole app.
+  // Ads and notification setup never block startup: none of these calls
+  // are awaited, so a slow/unreachable network only delays those
+  // features, not the whole app.
   unawaited(AdService.initialize());
   unawaited(NotificationService.initialize());
+  if (firebaseReady) unawaited(PushNotificationService.initialize());
   runApp(const ProviderScope(child: App()));
 }
 

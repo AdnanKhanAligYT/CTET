@@ -352,3 +352,25 @@ $$;
 
 revoke all on function public.compute_test_set_rank(uuid, int, int) from public;
 grant execute on function public.compute_test_set_rank(uuid, int, int) to authenticated;
+
+-- ============================================================
+-- Push notifications — device_tokens (was nothing; new feature)
+--
+-- Written by the app itself (PushNotificationService, one row per
+-- device — upserted keyed by token, since a reinstall gets a fresh
+-- token). Read by the reference PHP app's admin tool (service_role key,
+-- bypasses RLS) to broadcast a manually-composed notification to every
+-- registered device via Firebase Cloud Messaging.
+-- ============================================================
+create table public.device_tokens (
+  token text primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  platform text not null default 'android',
+  updated_at timestamptz not null default now()
+);
+
+create index device_tokens_user_id_idx on public.device_tokens (user_id);
+
+alter table public.device_tokens enable row level security;
+create policy "device_tokens: own rows" on public.device_tokens
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
