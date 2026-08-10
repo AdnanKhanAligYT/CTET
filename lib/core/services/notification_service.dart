@@ -261,10 +261,10 @@ class NotificationService {
   /// instance/channel rather than standing up a second one.
   static Future<void> showNow({required String title, required String body}) {
     return _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      _details(),
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      body: body,
+      notificationDetails: _details(),
     );
   }
 

@@ -61,7 +61,7 @@ const _requiresAuth = [
 
 final appRouter = GoRouter(
   initialLocation: '/welcome',
-  navigatorObservers: [routeObserver],
+  observers: [routeObserver],
   refreshListenable: GoRouterRefreshStream(
     Supabase.instance.client.auth.onAuthStateChange,
   ),
