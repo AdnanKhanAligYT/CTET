@@ -11,10 +11,19 @@ class SyllabusRepository {
 
   Future<List<SyllabusTopic>> fetchTopicsForExams(List<String> exams) async {
     if (exams.isEmpty) return const [];
+    // Syllabus content is tagged generically ("CTET") rather than
+    // per-paper, since Paper 1/Paper 2 share most of the syllabus — a
+    // profile exam of "CTET Paper 1"/"CTET Paper 2" still needs to match
+    // that shared "CTET" tag.
+    final lookupExams = {
+      ...exams,
+      for (final e in exams)
+        if (e.contains('CTET')) 'CTET',
+    }.toList();
     final rows = await _client
         .from('syllabus_topics')
         .select()
-        .inFilter('exam', exams);
+        .inFilter('exam', lookupExams);
     final topics =
         rows
             .map((row) => SyllabusTopic.fromMap(row['id'] as String, row))
