@@ -147,6 +147,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _save() async {
+    // HomeGate won't consider setup complete without at least one exam
+    // (see UserProfile.isSetupComplete) — without this check, clicking
+    // Continue with no exam picked used to silently save and bounce the
+    // student right back to this same screen with no explanation.
+    if (_selectedExams.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Continue karne se pehle kam se kam ek exam chuno.'),
+        ),
+      );
+      return;
+    }
     final base = _profile!;
     setState(() => _saving = true);
     final updated = base.copyWith(
