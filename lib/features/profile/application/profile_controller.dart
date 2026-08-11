@@ -40,6 +40,7 @@ class ProfileController extends Notifier<AsyncValue<void>> {
   Future<void> createInitialProfile({
     required String displayName,
     required DisplayNameSource source,
+    List<String> exams = const [],
   }) async {
     final user = _currentUser;
     if (user == null) return;
@@ -55,6 +56,7 @@ class ProfileController extends Notifier<AsyncValue<void>> {
         email: user.email,
         phone: user.phone,
         designation: 'Student',
+        exams: exams,
         passwordSet: user.appMetadata['provider'] == 'email',
       );
       await _client.from('profiles').upsert(profile.toMap());
@@ -86,12 +88,26 @@ class ProfileController extends Notifier<AsyncValue<void>> {
   /// `supabase/schema.sql`) needs the `service_role` key, which must never
   /// ship inside the app, so this calls the `delete-account` Edge Function
   /// instead (see `supabase/functions/delete-account`).
+  /// Throws on failure (e.g. the Edge Function isn't deployed yet) instead
+  /// of the old silent-swallow — `AsyncValue.guard` alone captured the
+  /// error into `state` but nothing read it, so the Delete Account button
+  /// used to just do nothing with zero feedback. Callers should show
+  /// whatever this throws to the student. signOut() only ever runs after
+  /// the account is actually gone.
   Future<void> deleteAccount() async {
     if (_currentUser == null) return;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await _client.functions.invoke('delete-account');
+    try {
+      final response = await _client.functions.invoke('delete-account');
+      final data = response.data;
+      if (data is Map && data['error'] != null) {
+        throw StateError(data['error'].toString());
+      }
       await _client.auth.signOut();
-    });
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
   }
 }

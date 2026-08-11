@@ -40,14 +40,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 child: Container(
                   width: 160,
                   height: 160,
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.navyLight : AppColors.navy,
                     borderRadius: BorderRadius.circular(36),
                   ),
-                  child: Image.asset(
-                    'assets/icon/icon_foreground.png',
-                    fit: BoxFit.contain,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: Image.asset(
+                      'assets/icon/icon_foreground.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),

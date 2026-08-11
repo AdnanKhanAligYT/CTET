@@ -214,7 +214,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ),
     );
     if (confirmed == true) {
-      await ref.read(profileControllerProvider.notifier).deleteAccount();
+      try {
+        await ref.read(profileControllerProvider.notifier).deleteAccount();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account delete nahi ho paya: $e')),
+        );
+      }
     }
   }
 

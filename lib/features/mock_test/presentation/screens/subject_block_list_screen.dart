@@ -38,10 +38,10 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
 
   Future<void> _load() async {
     try {
-      final allQuestions = await _repository.fetchAllQuestions();
-      final pool = dedupeByText(
-        allQuestions.where((q) => q.subject == widget.subject).toList(),
+      final subjectQuestions = await _repository.fetchQuestionsForSubject(
+        widget.subject,
       );
+      final pool = dedupeByText(subjectQuestions);
       if (!mounted) return;
       setState(() {
         _totalQuestions = pool.length;

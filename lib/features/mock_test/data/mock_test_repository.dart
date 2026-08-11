@@ -42,6 +42,16 @@ class MockTestRepository {
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
+  /// Same "ignore exam_tags" reasoning as [fetchAllQuestions], but filtered
+  /// server-side to one subject — Subject Wise Revision's block picker and
+  /// the actual test screen only ever need one subject at a time, so there
+  /// is no reason to pull every other subject's questions over the wire
+  /// just to immediately discard them client-side.
+  Future<List<Question>> fetchQuestionsForSubject(String subject) async {
+    final rows = await _client.from('questions').select().eq('subject', subject);
+    return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
+  }
+
   Future<Map<String, ReviewProgress>> fetchProgress(String uid) async {
     final rows = await _client
         .from('question_progress')

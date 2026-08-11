@@ -101,11 +101,11 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
     // Subject Wise Revision: every uploaded question with this subject,
     // not scoped to the student's exam selection — see
     // MockTestRepository.fetchAllQuestions for why.
-    final allQuestions = await _repository.fetchAllQuestions();
-    final progress = await _repository.fetchProgress(user.id);
-    var subjectQuestions = dedupeByText(
-      allQuestions.where((q) => q.subject == subject).toList(),
+    final subjectAllQuestions = await _repository.fetchQuestionsForSubject(
+      subject,
     );
+    final progress = await _repository.fetchProgress(user.id);
+    var subjectQuestions = dedupeByText(subjectAllQuestions);
 
     final block = widget.block;
     if (block != null) {
