@@ -23,44 +23,57 @@ class QuestionText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = question.isUrdu;
+    final crossAxis = isUrdu ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
     final table = question.table;
+    Widget content;
     if (table == null || table.isEmpty) {
-      return _prefixedText(question.text);
+      content = _prefixedText(question.text, isUrdu);
+    } else {
+      final text = question.text;
+      final markerIndex = text.indexOf(_marker);
+      if (markerIndex < 0) {
+        // No marker — table goes above the (still Q-prefixed) text.
+        content = Column(
+          crossAxisAlignment: crossAxis,
+          children: [
+            _QuestionTable(rows: table),
+            const SizedBox(height: 10),
+            _prefixedText(text, isUrdu),
+          ],
+        );
+      } else {
+        final before = text.substring(0, markerIndex);
+        final after = text.substring(markerIndex + _marker.length);
+        content = Column(
+          crossAxisAlignment: crossAxis,
+          children: [
+            if (before.trim().isNotEmpty) ...[
+              _prefixedText(before, isUrdu),
+              const SizedBox(height: 10),
+            ],
+            _QuestionTable(rows: table),
+            if (after.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              before.trim().isEmpty
+                  ? _prefixedText(after, isUrdu)
+                  : Text(
+                      after,
+                      style: style,
+                      textAlign: isUrdu ? TextAlign.right : null,
+                    ),
+            ],
+          ],
+        );
+      }
     }
 
-    final text = question.text;
-    final markerIndex = text.indexOf(_marker);
-    if (markerIndex < 0) {
-      // No marker — table goes above the (still Q-prefixed) text.
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _QuestionTable(rows: table),
-          const SizedBox(height: 10),
-          _prefixedText(text),
-        ],
-      );
-    }
-
-    final before = text.substring(0, markerIndex);
-    final after = text.substring(markerIndex + _marker.length);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (before.trim().isNotEmpty) ...[
-          _prefixedText(before),
-          const SizedBox(height: 10),
-        ],
-        _QuestionTable(rows: table),
-        if (after.trim().isNotEmpty) ...[
-          const SizedBox(height: 10),
-          before.trim().isEmpty ? _prefixedText(after) : Text(after, style: style),
-        ],
-      ],
-    );
+    if (!isUrdu) return content;
+    return Directionality(textDirection: TextDirection.rtl, child: content);
   }
 
-  Widget _prefixedText(String text) {
+  Widget _prefixedText(String text, bool isUrdu) {
     return Text.rich(
       TextSpan(
         children: [
@@ -72,6 +85,7 @@ class QuestionText extends StatelessWidget {
         ],
       ),
       style: style,
+      textAlign: isUrdu ? TextAlign.right : null,
     );
   }
 }

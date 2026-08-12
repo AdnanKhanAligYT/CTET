@@ -61,4 +61,8 @@ class Question {
     if (optionIndex < 0 || optionIndex >= explanations.length) return '';
     return explanations[optionIndex];
   }
+
+  /// Urdu reads right-to-left — question/option-rendering widgets check
+  /// this to mirror their layout instead of always assuming LTR.
+  bool get isUrdu => subject.trim().toLowerCase() == 'urdu';
 }

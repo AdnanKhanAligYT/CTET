@@ -354,6 +354,7 @@ class _NamedTestScreenState extends State<NamedTestScreen>
             letter: _optionLetter(i),
             text: question.options[i],
             state: _OptionVisualState.neutral,
+            isUrdu: question.isUrdu,
             onTap: () => _selectOption(question, i),
           ),
       ],
@@ -381,6 +382,7 @@ class _NamedTestScreenState extends State<NamedTestScreen>
                 : (i == selected
                       ? _OptionVisualState.wrong
                       : _OptionVisualState.disabled),
+            isUrdu: question.isUrdu,
             onTap: () {},
           ),
         const SizedBox(height: 12),
@@ -511,12 +513,14 @@ class _OptionTile extends StatelessWidget {
     required this.text,
     required this.state,
     required this.onTap,
+    this.isUrdu = false,
   });
 
   final String letter;
   final String text;
   final _OptionVisualState state;
   final VoidCallback onTap;
+  final bool isUrdu;
 
   @override
   Widget build(BuildContext context) {
@@ -548,7 +552,7 @@ class _OptionTile extends StatelessWidget {
         break;
     }
 
-    return Padding(
+    final card = Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         onTap: onTap,
@@ -582,6 +586,7 @@ class _OptionTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   text,
+                  textAlign: isUrdu ? TextAlign.right : null,
                   style: TextStyle(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w600,
@@ -600,6 +605,9 @@ class _OptionTile extends StatelessWidget {
         ),
       ),
     );
+
+    if (!isUrdu) return card;
+    return Directionality(textDirection: TextDirection.rtl, child: card);
   }
 }
 
