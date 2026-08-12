@@ -129,7 +129,13 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
 
     setState(() => _opening = true);
     try {
-      if (set.type == TestSetType.mockTest) {
+      // Which flow to use is decided by the tab/catalog this screen was
+      // opened under (widget.type), NOT the set's own primary `type` in the
+      // DB — a set cross-listed into both (admin's "+ ... mein bhi dikhao")
+      // must behave as Mock Test when opened from the Mock Test tab, and as
+      // PYQ when opened from the PYQ tab, regardless of which one it was
+      // originally created as.
+      if (widget.type == TestSetType.mockTest) {
         await _openMockTest(uid, set);
       } else {
         await _openPyq(uid, set);
