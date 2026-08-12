@@ -12,6 +12,9 @@ import '../../features/dashboard/presentation/screens/home_gate.dart';
 import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
 import '../../features/mock_test/presentation/screens/exam_list_screen.dart';
+import '../../features/mock_test/presentation/screens/mock_test_instructions_screen.dart';
+import '../../features/mock_test/presentation/screens/mock_test_result_screen.dart';
+import '../../features/mock_test/presentation/screens/mock_test_taking_screen.dart';
 import '../../features/mock_test/presentation/screens/named_test_result_screen.dart';
 import '../../features/mock_test/presentation/screens/named_test_screen.dart';
 import '../../features/mock_test/presentation/screens/paper_list_screen.dart';
@@ -49,6 +52,9 @@ const _requiresAuth = [
   '/mock-test/sets',
   '/mock-test/named',
   '/mock-test/named/result',
+  '/mock-test/instructions',
+  '/mock-test/take-v2',
+  '/mock-test/result-v2',
   '/mock-test/subjects',
   '/mock-test/subjects/blocks',
   '/pyq',
@@ -147,6 +153,24 @@ final appRouter = GoRouter(
       path: '/mock-test/named/result',
       builder: (context, state) =>
           NamedTestResultScreen(attempt: state.extra as TestAttempt),
+    ),
+    // ── New Mock Test exam-style flow (instructions -> free-navigation
+    // taking screen -> result with rank/percentile). PYQ keeps using the
+    // '/mock-test/named' flow above, unchanged. ──
+    GoRoute(
+      path: '/mock-test/instructions',
+      builder: (context, state) =>
+          MockTestInstructionsScreen(testSet: state.extra as TestSet),
+    ),
+    GoRoute(
+      path: '/mock-test/take-v2',
+      builder: (context, state) =>
+          MockTestTakingScreen(args: state.extra as MockTestTakingArgs),
+    ),
+    GoRoute(
+      path: '/mock-test/result-v2',
+      builder: (context, state) =>
+          MockTestResultScreen(args: state.extra as MockTestResultArgs),
     ),
     // ── Daily due-today practice (spaced repetition), and Subject Wise
     // Revision (same screen, `subject`+`block` query params switch the

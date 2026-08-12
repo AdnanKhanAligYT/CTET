@@ -161,6 +161,66 @@ class TestSetRepository {
         .update({
           'rank': rankRow['rank'],
           'participants_count': rankRow['participants'],
+          'percentile': rankRow['percentile'],
+        })
+        .eq('id', attemptId)
+        .select()
+        .single();
+    return TestAttempt.fromMap(row['id'] as String, row);
+  }
+
+  /// Mock Test's lightweight finish path — unlike [startAttempt]/
+  /// [saveProgress] above (still used by PYQ), this never writes a
+  /// per-question `answers` map to Supabase at all: the whole in-progress
+  /// attempt lives on-device (see MockTestLocalStore) and only the final
+  /// aggregate score is submitted here, in one go, to keep Supabase usage
+  /// light. Same insert -> rank RPC -> update-with-rank shape as
+  /// [finishAttempt], just starting from "completed" instead of
+  /// "in_progress" since there was never an earlier row to update.
+  Future<TestAttempt> submitMockTestAttempt({
+    required String uid,
+    required String setId,
+    required int totalQuestions,
+    required int correctCount,
+    required int wrongCount,
+    required int elapsedSeconds,
+    required DateTime startedAt,
+  }) async {
+    final inserted = await _client
+        .from('attempts')
+        .insert({
+          'user_id': uid,
+          'test_set_id': setId,
+          'status': 'completed',
+          'total_questions': totalQuestions,
+          'correct_count': correctCount,
+          'wrong_count': wrongCount,
+          'elapsed_seconds': elapsedSeconds,
+          'started_at': startedAt.toIso8601String(),
+          'submitted_at': DateTime.now().toIso8601String(),
+        })
+        .select()
+        .single();
+    final attemptId = inserted['id'] as String;
+
+    final rankRows =
+        await _client.rpc(
+              'compute_test_set_rank',
+              params: {
+                'p_test_set_id': setId,
+                'p_correct_count': correctCount,
+                'p_elapsed_seconds': elapsedSeconds,
+              },
+            )
+            as List;
+    final rankRow = rankRows.first as Map<String, dynamic>;
+
+    final row = await _client
+        .from('attempts')
+        .update({
+          'rank': rankRow['rank'],
+          'participants_count': rankRow['participants'],
+          'percentile': rankRow['percentile'],
         })
         .eq('id', attemptId)
         .select()

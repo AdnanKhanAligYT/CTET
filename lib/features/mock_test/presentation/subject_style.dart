@@ -51,6 +51,10 @@ const _knownSubjectStyles = <(List<String>, SubjectStyle)>[
     ['english'],
     SubjectStyle(icon: Icons.menu_book_outlined, color: Color(0xFF4C3FCF)),
   ),
+  (
+    ['urdu'],
+    SubjectStyle(icon: Icons.import_contacts_outlined, color: Color(0xFFB8860B)),
+  ),
 ];
 
 /// Any subject name that doesn't match a known keyword above still gets a

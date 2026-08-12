@@ -44,4 +44,12 @@ class AppColors {
   static const tileTimetable = Color(0xFF4C3FCF);
   static const tileNotepad = Color(0xFFB5541F);
   static const tileHistory = Color(0xFF6B7280);
+
+  /// Mock Test navigator's 4 question states — same convention every
+  /// competitive-exam software uses, so it reads as familiar rather than
+  /// needing its own legend to be memorized.
+  static const navNotVisited = Color(0xFF9CA3AF);
+  static const navNotAnswered = Color(0xFFE24C4C);
+  static const navAnswered = Color(0xFF1E9E63);
+  static const navReview = Color(0xFF7C5CFC);
 }

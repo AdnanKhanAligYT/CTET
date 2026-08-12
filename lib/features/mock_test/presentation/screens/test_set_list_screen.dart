@@ -3,13 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/exam_node.dart';
+import '../../../../core/models/mock_test_session.dart';
 import '../../../../core/models/test_attempt.dart';
 import '../../../../core/models/test_set.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
+import '../../data/mock_test_local_store.dart';
 import '../../data/student_shortcut_repository.dart';
 import '../../data/test_set_repository.dart';
+import 'mock_test_taking_screen.dart';
 import 'named_test_screen.dart';
 
 /// Third screen in the Mock Test / PYQ flow — named tests under one paper
@@ -126,55 +129,117 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
 
     setState(() => _opening = true);
     try {
-      final inProgress = await _repository.fetchInProgressAttempt(uid, set.id);
-      TestAttempt? resumeAttempt;
-
-      if (inProgress != null) {
-        if (!mounted) return;
-        final choice = await showDialog<_ResumeChoice>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Pichla attempt mila'),
-            content: Text(
-              'Is test ka ek attempt pehle se chal raha hai '
-              '(${_formatElapsed(inProgress.elapsedSeconds)} ho chuke hain). '
-              'Wahin se jaari rakhein ya naya shuru karein?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(_ResumeChoice.cancel),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(_ResumeChoice.fresh),
-                child: const Text('Naya Start Karo'),
-              ),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(_ResumeChoice.resume),
-                child: const Text('Resume Karo'),
-              ),
-            ],
-          ),
-        );
-
-        if (choice == null || choice == _ResumeChoice.cancel) return;
-        if (choice == _ResumeChoice.resume) {
-          resumeAttempt = inProgress;
-        } else {
-          await _repository.abandonAttempt(inProgress.id);
-        }
+      if (set.type == TestSetType.mockTest) {
+        await _openMockTest(uid, set);
+      } else {
+        await _openPyq(uid, set);
       }
-
-      if (!mounted) return;
-      context.push(
-        '/mock-test/named',
-        extra: NamedTestArgs(testSet: set, resumeAttempt: resumeAttempt),
-      );
     } finally {
       if (mounted) setState(() => _opening = false);
     }
+  }
+
+  /// Mock Test: resume state lives entirely on-device (MockTestLocalStore)
+  /// — no Supabase round-trip needed just to check whether a previous
+  /// attempt exists. Fresh starts go through the instructions screen;
+  /// resuming skips straight back into the test since instructions were
+  /// already shown the first time.
+  Future<void> _openMockTest(String uid, TestSet set) async {
+    final localSession = await MockTestLocalStore().load(uid, set.id);
+    MockTestSession? resumeSession;
+
+    if (localSession != null) {
+      if (!mounted) return;
+      final choice = await showDialog<_ResumeChoice>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Pichla attempt mila'),
+          content: Text(
+            'Is test ka ek attempt pehle se chal raha hai '
+            '(${_formatElapsed(localSession.elapsedSeconds)} ho chuke hain). '
+            'Wahin se jaari rakhein ya naya shuru karein?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.cancel),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.fresh),
+              child: const Text('Naya Start Karo'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.resume),
+              child: const Text('Resume Karo'),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == null || choice == _ResumeChoice.cancel) return;
+      if (choice == _ResumeChoice.resume) {
+        resumeSession = localSession;
+      } else {
+        await MockTestLocalStore().clear(uid, set.id);
+      }
+    }
+
+    if (!mounted) return;
+    if (resumeSession != null) {
+      context.push(
+        '/mock-test/take-v2',
+        extra: MockTestTakingArgs(testSet: set, resumeSession: resumeSession),
+      );
+    } else {
+      context.push('/mock-test/instructions', extra: set);
+    }
+  }
+
+  Future<void> _openPyq(String uid, TestSet set) async {
+    final inProgress = await _repository.fetchInProgressAttempt(uid, set.id);
+    TestAttempt? resumeAttempt;
+
+    if (inProgress != null) {
+      if (!mounted) return;
+      final choice = await showDialog<_ResumeChoice>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Pichla attempt mila'),
+          content: Text(
+            'Is test ka ek attempt pehle se chal raha hai '
+            '(${_formatElapsed(inProgress.elapsedSeconds)} ho chuke hain). '
+            'Wahin se jaari rakhein ya naya shuru karein?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.cancel),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.fresh),
+              child: const Text('Naya Start Karo'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(_ResumeChoice.resume),
+              child: const Text('Resume Karo'),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == null || choice == _ResumeChoice.cancel) return;
+      if (choice == _ResumeChoice.resume) {
+        resumeAttempt = inProgress;
+      } else {
+        await _repository.abandonAttempt(inProgress.id);
+      }
+    }
+
+    if (!mounted) return;
+    context.push(
+      '/mock-test/named',
+      extra: NamedTestArgs(testSet: set, resumeAttempt: resumeAttempt),
+    );
   }
 
   String _formatElapsed(int seconds) {

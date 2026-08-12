@@ -29,6 +29,7 @@ class TestAttempt {
     required this.totalQuestions,
     required this.rank,
     required this.participantsCount,
+    this.percentile,
   });
 
   final String id;
@@ -53,6 +54,11 @@ class TestAttempt {
   final int? rank;
   final int? participantsCount;
 
+  /// Percentage of other completed attempts on the same test set this
+  /// attempt outscored — set alongside [rank] at submit time (see
+  /// supabase/migration_test_set_percentile.sql), never recomputed later.
+  final double? percentile;
+
   factory TestAttempt.fromMap(String id, Map<String, dynamic> map) {
     final rawAnswers = (map['answers'] as Map?)?.cast<String, dynamic>() ?? const {};
     return TestAttempt(
@@ -69,6 +75,7 @@ class TestAttempt {
       totalQuestions: (map['total_questions'] as num?)?.toInt() ?? 0,
       rank: (map['rank'] as num?)?.toInt(),
       participantsCount: (map['participants_count'] as num?)?.toInt(),
+      percentile: (map['percentile'] as num?)?.toDouble(),
     );
   }
 }
