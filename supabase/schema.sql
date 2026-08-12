@@ -54,7 +54,12 @@ create table public.questions (
   text text not null,
   options text[] not null,
   correct_option_index int not null,
-  explanations text[] not null
+  explanations text[] not null,
+  -- Optional table data for questions like "study the table below" — rows
+  -- of cells, e.g. [["City","Population"],["Delhi","3.2 crore"]], first
+  -- row is the header. Placed at a literal "{{table}}" marker in `text`,
+  -- or above the text if no marker is present. Null for ordinary questions.
+  "table" jsonb
 );
 
 alter table public.questions enable row level security;

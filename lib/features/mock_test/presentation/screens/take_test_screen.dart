@@ -13,6 +13,7 @@ import '../../../profile/application/profile_controller.dart';
 import '../../data/mock_test_repository.dart';
 import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
+import '../widgets/question_text.dart';
 import 'test_result_screen.dart';
 
 /// Mirrors `take_test.php` from the reference app: with no [subject], it's
@@ -306,16 +307,9 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Q${_currentIndex + 1}. ',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  TextSpan(text: question.text),
-                ],
-              ),
+            QuestionText(
+              question: question,
+              number: _currentIndex + 1,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 20),

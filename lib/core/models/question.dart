@@ -11,6 +11,7 @@ class Question {
     required this.options,
     required this.correctOptionIndex,
     required this.explanations,
+    this.table,
   });
 
   final String id;
@@ -25,6 +26,12 @@ class Question {
   /// picks an answer, whichever option they chose (matches the reference
   /// PHP mock-test's "instant feedback + explanation" behaviour).
   final List<String> explanations;
+
+  /// Optional "study the table below" data — rows of cells, first row is
+  /// the header. Null for ordinary questions. Placed at a literal
+  /// "{{table}}" marker in [text], or above the text if no marker is
+  /// present — see QuestionText, the shared widget that renders this.
+  final List<List<String>>? table;
 
   factory Question.fromMap(String id, Map<String, dynamic> map) {
     return Question(
@@ -42,6 +49,11 @@ class Question {
       explanations:
           (map['explanations'] as List?)?.map((e) => e.toString()).toList() ??
           const [],
+      table: (map['table'] as List?)
+          ?.map(
+            (row) => (row as List).map((cell) => cell.toString()).toList(),
+          )
+          .toList(),
     );
   }
 

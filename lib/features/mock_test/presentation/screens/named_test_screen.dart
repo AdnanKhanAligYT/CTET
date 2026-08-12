@@ -11,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/confirm_submit_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/test_set_repository.dart';
+import '../widgets/question_text.dart';
 
 /// Bundles what NamedTestScreen needs from the previous screen — the set
 /// being started, and (if the student chose "Resume Karo" on an existing
@@ -342,16 +343,9 @@ class _NamedTestScreenState extends State<NamedTestScreen>
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Q$number. ',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              TextSpan(text: question.text),
-            ],
-          ),
+        QuestionText(
+          question: question,
+          number: number,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 20),
@@ -372,16 +366,9 @@ class _NamedTestScreenState extends State<NamedTestScreen>
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Q$number. ',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              TextSpan(text: question.text),
-            ],
-          ),
+        QuestionText(
+          question: question,
+          number: number,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 20),
