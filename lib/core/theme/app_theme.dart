@@ -9,8 +9,12 @@ import 'app_colors.dart';
 /// Devanagari coverage — a Latin-only font would silently fall back to a
 /// generic system font the moment Hindi text appears, which would look
 /// inconsistent right where it matters most (question text, syllabus
-/// names). The font ships as a bundled asset (see pubspec.yaml) rather
-/// than through `google_fonts`' runtime fetching, so the app never depends
+/// names). Noto Sans has no Arabic-script glyphs, so Noto Nastaliq Urdu is
+/// registered as a font fallback (not a separate opt-in) — any Urdu
+/// question/option text picks it up automatically, glyph-by-glyph, without
+/// call sites needing to detect script and switch fontFamily themselves.
+/// Both fonts ship as bundled assets (see pubspec.yaml) rather than
+/// through `google_fonts`' runtime fetching, so the app never depends
 /// on reaching fonts.gstatic.com on a student's first launch. Field/
 /// button/list layout follows the reference Edit Profile screen: boxed
 /// inputs with a light border, a single navy accent for every link/
@@ -46,7 +50,10 @@ class AppTheme {
 
     final baseTextTheme =
         (isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
-            .apply(fontFamily: 'Noto Sans');
+            .apply(
+              fontFamily: 'Noto Sans',
+              fontFamilyFallback: const ['Noto Nastaliq Urdu'],
+            );
     final textTheme = baseTextTheme
         .apply(bodyColor: textPrimary, displayColor: textPrimary)
         .copyWith(

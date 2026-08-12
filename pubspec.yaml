@@ -128,10 +128,17 @@ flutter:
   # never depends on reaching fonts.gstatic.com on a student's first
   # launch — see core/theme/app_theme.dart for why Noto Sans specifically
   # (full Devanagari coverage for the app's Hindi/English content).
+  # Noto Nastaliq Urdu is registered as a fallback (not the primary family)
+  # so Urdu/Arabic-script glyphs — absent from Noto Sans — render in the
+  # correct Nastaliq calligraphic style instead of silently falling back to
+  # a generic system font, while Latin/Devanagari text is unaffected.
   fonts:
     - family: Noto Sans
       fonts:
         - asset: assets/fonts/NotoSans-VariableFont.ttf
+    - family: Noto Nastaliq Urdu
+      fonts:
+        - asset: assets/fonts/NotoNastaliqUrdu-VariableFont.ttf
 
 # Real launcher icon — see dev_dependencies note above. image_path is the
 # full-bleed icon (navy background + white glyph) used as-is on iOS and as
