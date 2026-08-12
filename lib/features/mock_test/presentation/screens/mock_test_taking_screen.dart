@@ -88,8 +88,8 @@ class _MockTestTakingScreenState extends State<MockTestTakingScreen>
       for (final s in _testSet.subjects)
         s: fetched.where((q) => q.subject == s).toList(),
     };
-    final questions = [
-      for (final s in _testSet.subjects) ...(bySubject[s] ?? const []),
+    final questions = <Question>[
+      for (final s in _testSet.subjects) ...(bySubject[s] ?? const <Question>[]),
     ].where((q) => declaredSubjects.contains(q.subject)).toList();
 
     if (questions.isEmpty) {
