@@ -71,7 +71,10 @@ login, storage) stays on Supabase.
       SHA-1 (`cd android && ./gradlew signingReport`) — Firebase Phone
       Auth needs it for silent verification. Download the
       **`google-services.json`** it gives you and put it at
-      `android/app/google-services.json` (gitignored — project-specific).
+      `android/app/google-services.json` (committed to the repo — this is
+      a single-project app, not a multi-dev open source one, so there's
+      only ever one Firebase project to point at; the file has no secret
+      in it, just a client API key scoped to this app's package name).
    4. Project Settings → General → under "Your project" copy the
       **Project ID** (not the project name — the short lowercase-with-
       hyphens ID).
