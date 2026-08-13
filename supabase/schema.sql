@@ -208,7 +208,12 @@ create table public.exams (
   -- showing every node in both). The admin tool's checkboxes let a node
   -- be scoped to just one. Fetches filter with `.contains('types', ...)`,
   -- same pattern as test_sets.types.
-  types text[] not null default array['mock_test', 'pyq']
+  types text[] not null default array['mock_test', 'pyq'],
+  -- How many times this folder has been opened (any authenticated student,
+  -- all-time total) — bumped via increment_exam_open_count() below every
+  -- time a node is tapped. Folder lists order by this descending, so the
+  -- most-opened folder floats to the top.
+  open_count int not null default 0
 );
 
 create index exams_parent_idx on public.exams (parent_exam_id);
@@ -216,6 +221,21 @@ create index exams_parent_idx on public.exams (parent_exam_id);
 alter table public.exams enable row level security;
 create policy "exams: read for signed-in students" on public.exams
   for select using (auth.role() = 'authenticated');
+
+-- Students can only SELECT on exams (policy above), not UPDATE, so bumping
+-- open_count needs a security-definer RPC — same pattern as
+-- compute_test_set_rank() further below.
+create or replace function public.increment_exam_open_count(p_exam_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.exams set open_count = open_count + 1 where id = p_exam_id;
+$$;
+
+revoke all on function public.increment_exam_open_count(uuid) from public;
+grant execute on function public.increment_exam_open_count(uuid) to authenticated;
 
 -- Uploaded exam/paper logos (see exams.logo_url) — public so the app can
 -- load them with a plain network image request, no auth header needed.

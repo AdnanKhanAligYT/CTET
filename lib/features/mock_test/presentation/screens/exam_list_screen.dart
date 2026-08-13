@@ -114,10 +114,13 @@ class _ExamListScreenState extends ConsumerState<ExamListScreen> {
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push(
-                        '/mock-test/papers?type=${widget.type.value}',
-                        extra: exam,
-                      ),
+                      onTap: () {
+                        _repository.recordExamOpened(exam.id);
+                        context.push(
+                          '/mock-test/papers?type=${widget.type.value}',
+                          extra: exam,
+                        );
+                      },
                     ),
                   );
                 },

@@ -21,6 +21,7 @@ Future<void> navigateIntoExamNode({
   required ExamNode node,
   required TestSetType type,
 }) async {
+  repository.recordExamOpened(node.id);
   final children = await repository.fetchPapers(node.id, type);
   if (!context.mounted) return;
   if (children.isNotEmpty) {

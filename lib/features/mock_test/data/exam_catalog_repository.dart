@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/exam_node.dart';
@@ -39,7 +41,11 @@ class ExamCatalogRepository {
     if (allowedNames != null && allowedNames.isNotEmpty) {
       query = query.inFilter('name', allowedNames);
     }
-    final rows = await query.order('sort_order');
+    // Most-opened folder first; sort_order (admin-set) only breaks ties
+    // among equally (or never-)opened folders.
+    final rows = await query
+        .order('open_count', ascending: false)
+        .order('sort_order');
     return rows.map((row) => ExamNode.fromMap(row)).toList();
   }
 
@@ -69,7 +75,22 @@ class ExamCatalogRepository {
         .eq('active', true)
         .eq('parent_exam_id', parentExamId)
         .contains('types', [type.value])
+        .order('open_count', ascending: false)
         .order('sort_order');
     return rows.map((row) => ExamNode.fromMap(row)).toList();
+  }
+
+  /// Fire-and-forget: bumps the folder's `open_count` by 1 every time a
+  /// student taps into it. Runs via a security-definer RPC since
+  /// authenticated clients can only SELECT on `exams`, not UPDATE
+  /// (see supabase/migration_exam_open_count.sql). Never awaited by
+  /// callers and errors are swallowed — a missed count shouldn't block
+  /// navigation or surface as a user-facing failure.
+  void recordExamOpened(String examId) {
+    unawaited(
+      _client
+          .rpc('increment_exam_open_count', params: {'p_exam_id': examId})
+          .catchError((_) {}),
+    );
   }
 }
