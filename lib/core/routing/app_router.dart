@@ -11,6 +11,7 @@ import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
 import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
+import '../../features/mock_test/presentation/screens/deep_link_test_open_screen.dart';
 import '../../features/mock_test/presentation/screens/exam_list_screen.dart';
 import '../../features/mock_test/presentation/screens/mock_test_instructions_screen.dart';
 import '../../features/mock_test/presentation/screens/mock_test_result_screen.dart';
@@ -47,6 +48,7 @@ const _requiresAuth = [
   '/',
   '/profile/edit',
   '/mock-test',
+  '/mock-test/open',
   '/mock-test/take',
   '/mock-test/papers',
   '/mock-test/sets',
@@ -125,6 +127,12 @@ final appRouter = GoRouter(
       path: '/mock-test',
       builder: (context, state) =>
           const ExamListScreen(type: TestSetType.mockTest),
+    ),
+    GoRoute(
+      path: '/mock-test/open',
+      builder: (context, state) => DeepLinkTestOpenScreen(
+        testSetId: state.uri.queryParameters['id'] ?? '',
+      ),
     ),
     GoRoute(
       path: '/pyq',

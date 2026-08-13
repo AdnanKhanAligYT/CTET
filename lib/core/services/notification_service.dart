@@ -19,6 +19,13 @@ class NotificationService {
   static final _localNotifications = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
+  /// Set by PushNotificationService at startup — lets a tapped admin
+  /// push's deep-link payload (JSON-encoded `{"action": ..., ...}`) reach
+  /// the router without this local-notification layer needing to know
+  /// anything about routes. Local reminders (due-reviews, streak, etc.)
+  /// never set a payload, so this is only ever invoked for admin pushes.
+  static void Function(String payload)? onNotificationTapped;
+
   static const _channel = AndroidNotificationChannel(
     'default_channel',
     'General',
@@ -83,6 +90,12 @@ class NotificationService {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          onNotificationTapped?.call(payload);
+        }
+      },
     );
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
@@ -259,12 +272,17 @@ class NotificationService {
   /// notification for a foreground FCM message the way they do when the
   /// app is backgrounded/terminated). Reuses this same plugin
   /// instance/channel rather than standing up a second one.
-  static Future<void> showNow({required String title, required String body}) {
+  static Future<void> showNow({
+    required String title,
+    required String body,
+    String? payload,
+  }) {
     return _localNotifications.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title: title,
       body: body,
       notificationDetails: _details(),
+      payload: payload,
     );
   }
 

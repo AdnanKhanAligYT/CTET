@@ -28,6 +28,22 @@ class TestSetRepository {
     return rows.map((row) => TestSet.fromMap(row)).toList();
   }
 
+  /// A single TestSet by id, with no exam/type filtering — used by a
+  /// notification's "open this specific test" deep link, which only ever
+  /// carries a bare test_set_id (unlike normal in-app navigation, which
+  /// always already has the full TestSet object in hand via `extra`).
+  /// Null if the id doesn't exist or was deactivated since the push went
+  /// out.
+  Future<TestSet?> fetchTestSetById(String id) async {
+    final row = await _client
+        .from('test_sets')
+        .select()
+        .eq('id', id)
+        .eq('active', true)
+        .maybeSingle();
+    return row == null ? null : TestSet.fromMap(row);
+  }
+
   /// Questions in this set's fixed order (by `position`, then `question_id`
   /// as a tie-break) — never shuffled, since a resumed attempt's "next
   /// question in this subject" is derived by walking this same order and
