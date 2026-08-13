@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "992082039986",
+    "project_id": "ctet-tet-by-adnan",
+    "storage_bucket": "ctet-tet-by-adnan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992082039986:android:52652bf54ce7f6d5f125ab",
+        "android_client_info": {
+          "package_name": "com.adnankhanaligyt.ctet_tet_prep"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "992082039986-4jio0s9uu2n3god1l32pdnp2mduuankk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2JywxFXVC7Hz0J1fyoQliMgfkMIpW1co"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "992082039986-4jio0s9uu2n3god1l32pdnp2mduuankk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
