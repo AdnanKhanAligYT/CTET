@@ -416,3 +416,24 @@ create table public.app_settings (
 alter table public.app_settings enable row level security;
 create policy "app_settings: read for signed-in students" on public.app_settings
   for select using (auth.role() = 'authenticated');
+
+-- ============================================================
+-- notification_log — audit trail of every push the admin tool's
+-- Notification tab has sent (see ctet_content_admin.php, send_notification
+-- action), shown back as the "Pehle Ki Notifications" history list there.
+-- Admin-tool-only (service_role key), same as questions/exams/etc. above —
+-- no student ever reads this, so it's left with RLS enabled and zero
+-- policies rather than an "authenticated" read policy.
+-- ============================================================
+create table public.notification_log (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  body text not null,
+  tap_action text,
+  target_exams text[] not null default '{}',
+  sent_count int not null default 0,
+  total_count int not null default 0,
+  sent_at timestamptz not null default now()
+);
+
+alter table public.notification_log enable row level security;
