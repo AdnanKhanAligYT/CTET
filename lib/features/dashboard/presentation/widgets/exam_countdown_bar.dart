@@ -73,7 +73,7 @@ class _ExamCountdownBarState extends State<ExamCountdownBar> {
       color: colorScheme.primary.withValues(alpha: 0.12),
       alignment: Alignment.center,
       child: Text(
-        '📅 Exam: $dateLabel  ·  ${days}d ${_two(hours)}:${_two(minutes)}:${_two(seconds)} baaki',
+        '📅 Exam: $dateLabel  ·  ${days}d ${_two(hours)}:${_two(minutes)}:${_two(seconds)} left',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w600,
           color: colorScheme.primary,
