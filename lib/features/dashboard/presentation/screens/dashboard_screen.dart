@@ -6,11 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../../../core/models/user_profile.dart';
 import '../../../../core/routing/route_observer.dart';
 import '../../../../core/services/ad_service.dart';
+import '../../../../core/services/app_settings_repository.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../mock_test/data/exam_catalog_repository.dart';
 import '../../../mock_test/data/student_shortcut_repository.dart';
 import '../../../mock_test/presentation/exam_navigation.dart';
+import '../widgets/exam_countdown_bar.dart';
 
 /// Home screen: profile summary up top, the study-tool quick-link tiles
 /// (Mock Test, Previous Year Questions, Syllabus, ...) — see
@@ -31,11 +33,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   final _shortcutRepository = StudentShortcutRepository();
   StudentShortcut? _shortcut;
   bool _opening = false;
+  DateTime? _examCountdownDate;
 
   @override
   void initState() {
     super.initState();
     _loadShortcut();
+    _loadExamCountdownDate();
+  }
+
+  // Same admin-set date/time NotificationService's 7:30 AM reminder
+  // already reads — only shown once it's confirmed still in the future,
+  // so a stale past date never flashes on screen before hiding itself.
+  Future<void> _loadExamCountdownDate() async {
+    try {
+      final date = await AppSettingsRepository().fetchExamCountdownDate();
+      if (!mounted) return;
+      setState(() {
+        _examCountdownDate = (date != null && date.isAfter(DateTime.now()))
+            ? date
+            : null;
+      });
+    } catch (_) {
+      // No countdown bar is an acceptable fallback — same stance as the
+      // shortcut tile above.
+    }
   }
 
   @override
@@ -111,6 +133,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onPressed: () => context.push('/profile/edit'),
           ),
         ],
+        bottom: _examCountdownDate != null
+            ? ExamCountdownBar(examDate: _examCountdownDate!)
+            : null,
       ),
       body: SafeArea(
         child: Column(
