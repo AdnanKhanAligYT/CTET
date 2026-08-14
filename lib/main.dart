@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,6 +33,15 @@ Future<void> main() async {
     // affected.
     await Firebase.initializeApp();
     firebaseReady = true;
+    // Report crashes/uncaught errors from real installs — Flutter
+    // framework errors and errors escaping the Dart error zone both route
+    // through here. Only wired once Firebase is actually up, same
+    // fail-open stance as everything else in this block.
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
   } catch (_) {
     // ignore
   }

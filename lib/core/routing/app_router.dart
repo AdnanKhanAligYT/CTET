@@ -1,3 +1,5 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -67,9 +69,21 @@ const _requiresAuth = [
   '/history',
 ];
 
+// Firebase.apps.isNotEmpty is a synchronous, already-initialized check —
+// safe here since `appRouter` (a lazily-evaluated top-level final) is
+// only ever actually read from App.build(), which runs after main()'s
+// Firebase.initializeApp() attempt has already resolved one way or the
+// other. Skips the analytics observer entirely rather than crash when
+// Firebase isn't set up (same fail-open stance as PushNotificationService).
+final _navigatorObservers = <NavigatorObserver>[
+  routeObserver,
+  if (Firebase.apps.isNotEmpty)
+    FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
+];
+
 final appRouter = GoRouter(
   initialLocation: '/welcome',
-  observers: [routeObserver],
+  observers: _navigatorObservers,
   refreshListenable: GoRouterRefreshStream(
     Supabase.instance.client.auth.onAuthStateChange,
   ),

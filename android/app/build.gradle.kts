@@ -14,6 +14,7 @@ plugins {
 // runs fine — Mobile Number sign-in just won't work yet.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 // Release signing — reads android/key.properties (gitignored, never

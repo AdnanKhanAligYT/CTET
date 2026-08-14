@@ -25,6 +25,10 @@ plugins {
     // supabase/functions/firebase-phone-bridge) — everything else in this
     // app is Supabase, not Firebase.
     id("com.google.gms.google-services") version "4.4.2" apply false
+    // Crash reporting (see lib/main.dart's FlutterError.onError wiring) —
+    // same conditional-apply-if-google-services.json-exists pattern as
+    // google-services above, in app/build.gradle.kts.
+    id("com.google.firebase.crashlytics") version "3.0.6" apply false
 }
 
 include(":app")
