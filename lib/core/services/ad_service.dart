@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// Ad Unit IDs. These are Google's official public **test** IDs — safe to
-/// ship during development, but they only ever serve test creatives and
-/// earn no real revenue. Swap these for the real IDs from your own AdMob
-/// account (https://apps.admob.com) before a production release; the
-/// AndroidManifest's `APPLICATION_ID` meta-data (see android/app/src/main/
-/// AndroidManifest.xml) needs the same swap.
+/// Ad Unit IDs — from the real AdMob account
+/// (admob.google.com, app "CTET & State TET Prep", app ID
+/// ca-app-pub-4806343972940588~1328644052, see AndroidManifest's
+/// `APPLICATION_ID` meta-data for that one).
 class AdUnitIds {
   const AdUnitIds._();
 
-  static const banner = 'ca-app-pub-3940256099942544/6300978111';
-  static const interstitial = 'ca-app-pub-3940256099942544/1033173712';
+  static const banner = 'ca-app-pub-4806343972940588/1563663954';
+  static const interstitial = 'ca-app-pub-4806343972940588/9361378440';
 }
 
 /// Thin wrapper around the Mobile Ads SDK: one-time init, plus an

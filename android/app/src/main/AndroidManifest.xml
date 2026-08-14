@@ -44,14 +44,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Google's public TEST App ID (safe to ship, serves test ads
-             only). Replace with your own AdMob app's ID from
-             https://apps.admob.com before a production release — see
-             lib/core/services/ad_service.dart for the matching ad unit
-             IDs that also need swapping. -->
+        <!-- Real AdMob App ID (admob.google.com, app "CTET & State TET
+             Prep") — see lib/core/services/ad_service.dart for the
+             matching real ad unit IDs. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-4806343972940588~1328644052"/>
         <!-- Without this, FCM falls back to its own auto-created channel
              (default importance) whenever the app is backgrounded/killed
              when a push arrives, which sits silently in the notification
