@@ -60,6 +60,24 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="default_channel"/>
+        <!-- Without this, every zonedSchedule() alarm from NotificationService
+             gets silently wiped by Android on every device reboot (this is
+             normal OS behavior for AlarmManager alarms) and never comes back
+             until the student happens to reopen the app — which re-runs
+             initialize() and re-schedules everything. The
+             RECEIVE_BOOT_COMPLETED permission above does nothing on its own;
+             this receiver is what flutter_local_notifications actually uses
+             to re-arm pending notifications right after boot. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

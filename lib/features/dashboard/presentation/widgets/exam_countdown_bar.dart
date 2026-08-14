@@ -70,13 +70,19 @@ class _ExamCountdownBarState extends State<ExamCountdownBar> {
     return Container(
       height: 26,
       width: double.infinity,
-      color: colorScheme.primary.withValues(alpha: 0.12),
+      // primaryContainer/onPrimaryContainer (rather than reusing `primary`
+      // as both the tint and the text color) are Material 3's purpose-built
+      // "container" role pair — generated per-brightness with guaranteed
+      // contrast, so this reads correctly in dark mode too instead of
+      // showing dark-on-dark text (primary in dark mode is still a fairly
+      // dark navy, chosen for white-on-primary button contrast elsewhere).
+      color: colorScheme.primaryContainer,
       alignment: Alignment.center,
       child: Text(
         '📅 Exam: $dateLabel  ·  ${days}d ${_two(hours)}:${_two(minutes)}:${_two(seconds)} left',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w600,
-          color: colorScheme.primary,
+          color: colorScheme.onPrimaryContainer,
         ),
       ),
     );
