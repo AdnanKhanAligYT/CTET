@@ -19,6 +19,21 @@ class NotificationService {
   static final _localNotifications = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
+  // Whether the OS actually granted the exact-alarm special permission
+  // (Android 12+ — many OEMs, Samsung especially, route this through a
+  // Settings screen the student must confirm, and a denial here used to
+  // make every zonedSchedule() call below throw, which — since they ran
+  // one sequential `await` after another with nothing catching the
+  // exception — silently aborted every reminder AFTER whichever one
+  // failed first, not just that one. Reminders now always schedule with
+  // whatever mode this permission actually allows, so a denial degrades
+  // to "a few minutes late" instead of "never fires at all".
+  static bool _exactAlarmsGranted = false;
+
+  static AndroidScheduleMode get _scheduleMode => _exactAlarmsGranted
+      ? AndroidScheduleMode.exactAllowWhileIdle
+      : AndroidScheduleMode.inexactAllowWhileIdle;
+
   /// Set by PushNotificationService at startup — lets a tapped admin
   /// push's deep-link payload (JSON-encoded `{"action": ..., ...}`) reach
   /// the router without this local-notification layer needing to know
@@ -103,12 +118,24 @@ class NotificationService {
         >();
     await androidPlugin?.createNotificationChannel(_channel);
     await androidPlugin?.requestNotificationsPermission();
-    await androidPlugin?.requestExactAlarmsPermission();
+    _exactAlarmsGranted =
+        await androidPlugin?.requestExactAlarmsPermission() ?? false;
 
-    await _scheduleDueReviewsReminder();
-    await _scheduleWeeklySummaryReminder();
-    await _scheduleDailyGoalReminder();
-    await _scheduleStreakReminder();
+    // Each reminder is independent — one throwing (bad state, a OEM quirk,
+    // whatever) must not stop the rest from getting scheduled.
+    await _safely(_scheduleDueReviewsReminder);
+    await _safely(_scheduleWeeklySummaryReminder);
+    await _safely(_scheduleDailyGoalReminder);
+    await _safely(_scheduleStreakReminder);
+  }
+
+  static Future<void> _safely(Future<void> Function() schedule) async {
+    try {
+      await schedule();
+    } catch (_) {
+      // See _exactAlarmsGranted's doc comment — a single reminder failing
+      // to schedule is not worth taking every other one down with it.
+    }
   }
 
   /// Daily nudge — kept as a fixed 8 AM prompt rather than a live due-count
@@ -122,7 +149,7 @@ class NotificationService {
       body: 'Check Mock Test and Dictionary for items waiting to be reviewed.',
       scheduledDate: _nextInstanceOf(hour: 8, minute: 0),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -134,7 +161,7 @@ class NotificationService {
       body: 'See how your mock test scores went this week in History.',
       scheduledDate: _nextInstanceOf(hour: 19, minute: 0, weekday: DateTime.sunday),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
@@ -150,7 +177,7 @@ class NotificationService {
       body: 'Thodi der nikaal ke aaj ka practice goal pura kar lo.',
       scheduledDate: _nextInstanceOf(hour: 13, minute: 0),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -164,7 +191,7 @@ class NotificationService {
       body: 'Agar aaj abhi tak practice nahi kiya, toh ek test abhi kar lo.',
       scheduledDate: _nextInstanceOf(hour: 21, minute: 0),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -179,8 +206,8 @@ class NotificationService {
   static Future<void> refreshDynamicReminders({DateTime? examDate}) async {
     if (_dynamicRemindersRefreshedThisSession) return;
     _dynamicRemindersRefreshedThisSession = true;
-    await _scheduleMotivationalReminders();
-    await _scheduleExamCountdownReminder(examDate);
+    await _safely(_scheduleMotivationalReminders);
+    await _safely(() => _scheduleExamCountdownReminder(examDate));
   }
 
   static Future<void> _scheduleMotivationalReminders() async {
@@ -190,7 +217,7 @@ class NotificationService {
       body: _randomQuote(),
       scheduledDate: _nextInstanceOf(hour: 11, minute: 0),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     await _localNotifications.zonedSchedule(
@@ -199,7 +226,7 @@ class NotificationService {
       body: _randomQuote(),
       scheduledDate: _nextInstanceOf(hour: 18, minute: 0),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -230,7 +257,7 @@ class NotificationService {
       body: body,
       scheduledDate: _nextInstanceOf(hour: 7, minute: 30),
       notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -250,18 +277,20 @@ class NotificationService {
       final block = blocks[i];
       final reminderMinutes = block.startMinutes - 10;
       if (reminderMinutes < 0) continue;
-      await _localNotifications.zonedSchedule(
-        id: _timetableNotificationIdBase + i,
-        title: 'Time to study',
-        body: '${block.subject} starts in 10 minutes.',
-        scheduledDate: _nextInstanceOf(
-          hour: reminderMinutes ~/ 60,
-          minute: reminderMinutes % 60,
-          weekday: block.dayOfWeek,
+      await _safely(
+        () => _localNotifications.zonedSchedule(
+          id: _timetableNotificationIdBase + i,
+          title: 'Time to study',
+          body: '${block.subject} starts in 10 minutes.',
+          scheduledDate: _nextInstanceOf(
+            hour: reminderMinutes ~/ 60,
+            minute: reminderMinutes % 60,
+            weekday: block.dayOfWeek,
+          ),
+          notificationDetails: _details(),
+          androidScheduleMode: _scheduleMode,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         ),
-        notificationDetails: _details(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
     }
   }
