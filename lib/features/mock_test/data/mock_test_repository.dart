@@ -22,10 +22,13 @@ class MockTestRepository {
       for (final e in exams)
         if (e.contains('CTET')) 'CTET',
     }.toList();
-    final rows = await _client
-        .from('questions')
-        .select()
-        .overlaps('exam_tags', lookupExams);
+    final rows = await _fetchAllRows(
+      (from, to) => _client
+          .from('questions')
+          .select()
+          .overlaps('exam_tags', lookupExams)
+          .range(from, to),
+    );
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
@@ -38,8 +41,34 @@ class MockTestRepository {
   /// to reflect "whatever's been uploaded" anyway, not be scoped to the
   /// student's own exam selection like the due-today practice above.
   Future<List<Question>> fetchAllQuestions() async {
-    final rows = await _client.from('questions').select();
+    final rows = await _fetchAllRows(
+      (from, to) => _client.from('questions').select().range(from, to),
+    );
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
+  }
+
+  /// Supabase's PostgREST caps every response at a fixed max-rows (1000 by
+  /// default) no matter how many rows actually match — it silently returns
+  /// a truncated page instead of erroring, and with no ORDER BY on these
+  /// queries *which* 1000 rows come back isn't even stable between calls.
+  /// That's exactly what was showing up as random-looking subject counts
+  /// on Subject Wise Revision once the question bank passed 1000 rows.
+  /// Pages through with .range() so nothing gets silently dropped. Takes a
+  /// (from, to) callback rather than a pre-built query object so it works
+  /// with whatever filters the caller already chained on.
+  Future<List<Map<String, dynamic>>> _fetchAllRows(
+    dynamic Function(int from, int to) queryPage,
+  ) async {
+    const pageSize = 1000;
+    final all = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final List<dynamic> page = await queryPage(offset, offset + pageSize - 1);
+      all.addAll(page.cast<Map<String, dynamic>>());
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
   }
 
   /// Same "ignore exam_tags" reasoning as [fetchAllQuestions], but filtered
@@ -48,7 +77,13 @@ class MockTestRepository {
   /// is no reason to pull every other subject's questions over the wire
   /// just to immediately discard them client-side.
   Future<List<Question>> fetchQuestionsForSubject(String subject) async {
-    final rows = await _client.from('questions').select().eq('subject', subject);
+    final rows = await _fetchAllRows(
+      (from, to) => _client
+          .from('questions')
+          .select()
+          .eq('subject', subject)
+          .range(from, to),
+    );
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
