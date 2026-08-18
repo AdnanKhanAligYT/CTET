@@ -147,6 +147,15 @@ class _MockTestTakingScreenState extends State<MockTestTakingScreen>
 
   Question get _currentQuestion => _questions[_currentIndex];
 
+  /// True once every question has an answer — drives the Next → Submit
+  /// Test swap in the bottom bar, regardless of which question is showing.
+  bool get _allAnswered =>
+      _questions.every((q) => _answers.containsKey(q.id));
+
+  int _firstIndexForSubject(String subject) {
+    return _questions.indexWhere((q) => q.subject == subject);
+  }
+
   void _goTo(int index) {
     if (index < 0 || index >= _questions.length) return;
     setState(() {
@@ -418,12 +427,22 @@ class _MockTestTakingScreenState extends State<MockTestTakingScreen>
         body: SafeArea(
           child: Column(
             children: [
+              _SubjectTabs(
+                subjects: _testSet.subjects,
+                currentSubject: q.subject,
+                onSelected: (subject) {
+                  final index = _firstIndexForSubject(subject);
+                  if (index >= 0) _goTo(index);
+                },
+              ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                child: Text(
-                  'Question ${_currentIndex + 1} of '
-                  '${_questions.length} — ${q.subject}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Question ${_currentIndex + 1} of ${_questions.length}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               ),
               Expanded(
@@ -451,9 +470,11 @@ class _MockTestTakingScreenState extends State<MockTestTakingScreen>
                 flagged: flagged,
                 canGoPrevious: _currentIndex > 0,
                 canGoNext: _currentIndex < _questions.length - 1,
+                allAnswered: _allAnswered,
                 onFlag: _toggleFlag,
                 onPrevious: () => _goTo(_currentIndex - 1),
                 onNext: () => _goTo(_currentIndex + 1),
+                onSubmit: _confirmAndSubmit,
               ),
             ],
           ),
@@ -474,17 +495,23 @@ class _BottomBar extends StatelessWidget {
     required this.flagged,
     required this.canGoPrevious,
     required this.canGoNext,
+    required this.allAnswered,
     required this.onFlag,
     required this.onPrevious,
     required this.onNext,
+    required this.onSubmit,
   });
 
   final bool flagged;
   final bool canGoPrevious;
   final bool canGoNext;
+
+  /// Every question has an answer — swaps the Next button for Submit Test.
+  final bool allAnswered;
   final VoidCallback onFlag;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -512,12 +539,45 @@ class _BottomBar extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: FilledButton(
-                onPressed: canGoNext ? onNext : null,
-                child: const Text('Next'),
+                onPressed: allAnswered ? onSubmit : (canGoNext ? onNext : null),
+                child: Text(allAnswered ? 'Submit Test' : 'Next'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SubjectTabs extends StatelessWidget {
+  const _SubjectTabs({
+    required this.subjects,
+    required this.currentSubject,
+    required this.onSelected,
+  });
+
+  final List<String> subjects;
+  final String currentSubject;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          for (final subject in subjects)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(subject),
+                selected: currentSubject == subject,
+                onSelected: (_) => onSelected(subject),
+              ),
+            ),
+        ],
       ),
     );
   }

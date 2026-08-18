@@ -12,6 +12,7 @@ class Question {
     required this.correctOptionIndex,
     required this.explanations,
     this.table,
+    this.images = const [],
   });
 
   final String id;
@@ -32,6 +33,12 @@ class Question {
   /// "{{table}}" marker in [text], or above the text if no marker is
   /// present — see QuestionText, the shared widget that renders this.
   final List<List<String>>? table;
+
+  /// Image URLs for figures/diagrams referenced by [text]. There is no
+  /// per-image index to keep in sync by hand — every literal "{{img}}"
+  /// marker in [text] is replaced, in the order the markers appear, by
+  /// the image at the same position in this list. See QuestionText.
+  final List<String> images;
 
   factory Question.fromMap(String id, Map<String, dynamic> map) {
     return Question(
@@ -54,6 +61,9 @@ class Question {
             (row) => (row as List).map((cell) => cell.toString()).toList(),
           )
           .toList(),
+      images:
+          (map['image_urls'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
     );
   }
 
