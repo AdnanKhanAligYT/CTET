@@ -59,7 +59,13 @@ create table public.questions (
   -- of cells, e.g. [["City","Population"],["Delhi","3.2 crore"]], first
   -- row is the header. Placed at a literal "{{table}}" marker in `text`,
   -- or above the text if no marker is present. Null for ordinary questions.
-  "table" jsonb
+  "table" jsonb,
+  -- Optional figure/diagram URLs, e.g. Mathematics geometry figures.
+  -- Each literal "{{img}}" marker in `text` is filled by the entry at the
+  -- same position in this array — first marker gets image_urls[0], second
+  -- gets image_urls[1], and so on, so there's no per-image number to keep
+  -- track of. Null for ordinary questions.
+  image_urls jsonb
 );
 
 alter table public.questions enable row level security;
@@ -243,6 +249,12 @@ grant execute on function public.increment_exam_open_count(uuid) to authenticate
 -- bypasses Storage RLS the same way it bypasses every table's RLS above.
 insert into storage.buckets (id, name, public)
 values ('exam-logos', 'exam-logos', true)
+on conflict (id) do nothing;
+
+-- Uploaded question figures/diagrams (see questions.image_urls) — same
+-- public-bucket, admin-tool-only-write setup as exam-logos above.
+insert into storage.buckets (id, name, public)
+values ('question-images', 'question-images', true)
 on conflict (id) do nothing;
 
 create table public.test_sets (
