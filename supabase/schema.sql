@@ -65,7 +65,8 @@ create table public.questions (
   -- same position in this array — first marker gets image_urls[0], second
   -- gets image_urls[1], and so on, so there's no per-image number to keep
   -- track of. Null for ordinary questions.
-  image_urls jsonb
+  image_urls jsonb,
+  created_at timestamptz not null default now()
 );
 
 alter table public.questions enable row level security;
