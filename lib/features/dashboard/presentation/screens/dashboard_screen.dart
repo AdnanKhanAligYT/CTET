@@ -202,6 +202,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     onTap: () => context.push('/pyq'),
                   ),
                   const SizedBox(height: 12),
+                  const Center(child: AppBannerAd()),
+                  const SizedBox(height: 12),
                   _QuickLinkTile(
                     icon: Icons.auto_stories_outlined,
                     color: AppColors.tileMockTest,

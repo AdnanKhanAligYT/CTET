@@ -6,6 +6,7 @@ import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/mock_test_session.dart';
 import '../../../../core/models/test_attempt.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
@@ -123,11 +124,22 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     ),
   ];
 
-  Future<void> _open(TestSet set) async {
+  // Only the topmost test in the list is free — every other one shows a
+  // full-screen interstitial ad first (see [isFree] in the itemBuilder).
+  Future<void> _open(TestSet set, {required bool isFree}) async {
+    if (_opening) return;
     final uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid == null || _opening) return;
+    if (uid == null) return;
 
     setState(() => _opening = true);
+    if (isFree) {
+      await _proceedOpen(uid, set);
+    } else {
+      AdService.showBeforeOpeningTest(() => _proceedOpen(uid, set));
+    }
+  }
+
+  Future<void> _proceedOpen(String uid, TestSet set) async {
     try {
       // Which flow to use is decided by the tab/catalog this screen was
       // opened under (widget.type), NOT the set's own primary `type` in the
@@ -297,6 +309,7 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
                 itemCount: _sets.length,
                 itemBuilder: (context, index) {
                   final set = _sets[index];
+                  final isFree = index == 0;
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -305,10 +318,18 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
                         fallbackIcon: Icons.quiz_outlined,
                         fallbackColor: AppColors.tileMockTest,
                       ),
-                      title: Text(
-                        set.name,
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                      // Shrunk to fit a long name (e.g. "7 Feb 26(Science
+                      // (Hin Urdu))") on one line on any device width,
+                      // instead of a fixed size that wraps to two lines.
+                      title: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          set.name,
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                       ),
                       subtitle: Text(
                         [
@@ -318,9 +339,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
                           if (set.year != null) '${set.year}',
                         ].where((s) => s.isNotEmpty).join(' · '),
                       ),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: isFree
+                          ? const Icon(Icons.chevron_right)
+                          : const Icon(Icons.lock_outline, size: 20),
                       enabled: !_opening,
-                      onTap: () => _open(set),
+                      onTap: () => _open(set, isFree: isFree),
                     ),
                   );
                 },

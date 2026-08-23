@@ -61,6 +61,33 @@ class AdService {
   static void showAfterMockTest() {
     _interstitial?.show();
   }
+
+  /// Gate before opening a locked (non-free) test: shows a preloaded
+  /// interstitial and calls [onFinished] once it's dismissed. Same
+  /// fail-open stance as [showAfterMockTest] — no ad ready (no network,
+  /// still loading) means [onFinished] fires immediately rather than
+  /// blocking the student from the test they tapped.
+  static void showBeforeOpeningTest(VoidCallback onFinished) {
+    final ad = _interstitial;
+    if (ad == null) {
+      onFinished();
+      return;
+    }
+    _interstitial = null;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _loadInterstitial();
+        onFinished();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _loadInterstitial();
+        onFinished();
+      },
+    );
+    ad.show();
+  }
 }
 
 /// Drop-in banner ad, sized to Google's standard adaptive banner. Used at
