@@ -83,4 +83,9 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Firebase's Installations/Messaging SDKs schedule background work via
+    // WorkManager but don't always pull in a compatible version themselves —
+    // missing this causes a NoClassDefFoundError crash on startup in release
+    // builds (seen on the first Play Store install, not in local `flutter run`).
+    implementation("androidx.work:work-runtime:2.11.2")
 }
