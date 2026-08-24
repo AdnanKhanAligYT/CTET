@@ -103,16 +103,14 @@ class AuthController extends Notifier<AuthState> {
       try {
         googleUser = await _googleSignIn.authenticate();
       } on GoogleSignInException catch (e) {
-        // TEMP DIAGNOSTIC: showing every GoogleSignInException verbatim
-        // (including "canceled") to see exactly what code/description
-        // Play Services is actually returning — a real account pick was
-        // silently landing in the canceled branch below with no
-        // on-screen error, so this round shows raw detail instead of
-        // guessing. Restore the "canceled = silent" branch once the real
-        // code is known.
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // Student dismissed the account picker — not an error.
+          state = state.copyWith(status: AuthStatus.idle);
+          return false;
+        }
         state = state.copyWith(
           status: AuthStatus.error,
-          errorMessage: 'GoogleSignInException(${e.code}): ${e.description}',
+          errorMessage: _friendlyGoogleSignInMessage(e),
         );
         return false;
       }
@@ -289,6 +287,9 @@ class AuthController extends Notifier<AuthState> {
       return false;
     }
   }
+
+  String _friendlyGoogleSignInMessage(GoogleSignInException e) =>
+      'Could not sign in with Google — please try again.';
 
   String _friendlyMessage(AuthException e) {
     final msg = e.message.toLowerCase();
