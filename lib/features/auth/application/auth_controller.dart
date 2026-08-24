@@ -103,12 +103,18 @@ class AuthController extends Notifier<AuthState> {
       try {
         googleUser = await _googleSignIn.authenticate();
       } on GoogleSignInException catch (e) {
-        if (e.code == GoogleSignInExceptionCode.canceled) {
-          // Student dismissed the account picker — not an error.
-          state = state.copyWith(status: AuthStatus.idle);
-          return false;
-        }
-        rethrow;
+        // TEMP DIAGNOSTIC: showing every GoogleSignInException verbatim
+        // (including "canceled") to see exactly what code/description
+        // Play Services is actually returning — a real account pick was
+        // silently landing in the canceled branch below with no
+        // on-screen error, so this round shows raw detail instead of
+        // guessing. Restore the "canceled = silent" branch once the real
+        // code is known.
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: 'GoogleSignInException(${e.code}): ${e.description}',
+        );
+        return false;
       }
       // v7: the ID token comes back with the account itself — no separate
       // async `.authentication` call needed like in v6.
