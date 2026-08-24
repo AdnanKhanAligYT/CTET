@@ -7,12 +7,14 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../domain/auth_state.dart';
 
-// Google Cloud Console -> APIs & Services -> Credentials -> "Web client"
-// OAuth Client ID (NOT the Android client — google_sign_in needs the web
-// one as `serverClientId` so the id token it returns is one Supabase's
-// Google provider will accept). See README "Google Sign-In setup".
+// Firebase Console -> Authentication -> Sign-in method -> Google -> Web
+// SDK configuration -> "Web client ID". This is the Web OAuth client
+// Firebase itself created and links to this project's Android OAuth
+// clients (the earlier constant here pointed at a manually-created Web
+// client that was never actually wired to this project the same way,
+// which is what caused sign_in_failed/DEVELOPER_ERROR on every build).
 const _googleServerClientId =
-    '992082039986-4jio0s9uu2n3god1l32pdnp2mduuankk.apps.googleusercontent.com';
+    '992082039986-4krr8mj7igfo9g25v6hsq7ibs2lcl4dn.apps.googleusercontent.com';
 
 final _client = Supabase.instance.client;
 
@@ -38,6 +40,19 @@ class AuthController extends Notifier<AuthState> {
   // confirmOtp/resend.
   String? _firebaseVerificationId;
   int? _firebaseResendToken;
+
+  // google_sign_in v7 requires initialize() to run once before any other
+  // call on the singleton — done lazily on first sign-in attempt rather
+  // than at app startup so a student who never taps "Continue with
+  // Google" never pays for it.
+  final _googleSignIn = GoogleSignIn.instance;
+  bool _googleSignInInitialized = false;
+
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInInitialized) return;
+    await _googleSignIn.initialize(serverClientId: _googleServerClientId);
+    _googleSignInInitialized = true;
+  }
 
   @override
   AuthState build() => const AuthState();
@@ -83,23 +98,27 @@ class AuthController extends Notifier<AuthState> {
   Future<bool> signInWithGoogle() async {
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
     try {
-      final googleUser = await GoogleSignIn(
-        serverClientId: _googleServerClientId,
-      ).signIn();
-      if (googleUser == null) {
-        // Student dismissed the account picker — not an error.
-        state = state.copyWith(status: AuthStatus.idle);
-        return false;
+      await _ensureGoogleSignInInitialized();
+      final GoogleSignInAccount googleUser;
+      try {
+        googleUser = await _googleSignIn.authenticate();
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // Student dismissed the account picker — not an error.
+          state = state.copyWith(status: AuthStatus.idle);
+          return false;
+        }
+        rethrow;
       }
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      // v7: the ID token comes back with the account itself — no separate
+      // async `.authentication` call needed like in v6.
+      final idToken = googleUser.authentication.idToken;
       if (idToken == null) {
         throw StateError('Could not get a Google ID token.');
       }
       await _auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
-        accessToken: googleAuth.accessToken,
       );
       // Don't rely on Supabase's own decoding of the ID token for the
       // photo — whether user_metadata ends up with an avatar_url/picture
