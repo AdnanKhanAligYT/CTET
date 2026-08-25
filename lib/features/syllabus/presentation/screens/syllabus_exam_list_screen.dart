@@ -86,21 +86,21 @@ class _SyllabusExamListScreenState
     const title = 'Syllabus';
 
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         appBar: AppBar(title: Text(title)),
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: const AppBar(title: Text(title)),
+        appBar: AppBar(title: Text(title)),
         body: LoadError(message: _error!, onRetry: _load),
       );
     }
 
     return Scaffold(
-      appBar: const AppBar(title: Text(title)),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: _exams.isEmpty
             ? const Center(
