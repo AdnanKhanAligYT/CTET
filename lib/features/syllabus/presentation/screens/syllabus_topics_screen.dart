@@ -189,13 +189,12 @@ class _MarksTable extends StatelessWidget {
                 for (final cell in rows[r])
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     child: Text(
                       cell,
                       style: TextStyle(
-                        fontSize: 12,
                         fontWeight: r == 0 ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
