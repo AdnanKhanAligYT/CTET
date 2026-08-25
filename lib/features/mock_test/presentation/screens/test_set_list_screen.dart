@@ -171,11 +171,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
       final choice = await showDialog<_ResumeChoice>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Pichla attempt mila'),
+          title: const Text('Previous attempt found'),
           content: Text(
-            'Is test ka ek attempt pehle se chal raha hai '
-            '(${_formatElapsed(localSession.elapsedSeconds)} ho chuke hain). '
-            'Wahin se jaari rakhein ya naya shuru karein?',
+            'You already have an attempt in progress for this test '
+            '(${_formatElapsed(localSession.elapsedSeconds)} so far). '
+            'Continue from where you left off, or start over?',
           ),
           actions: [
             TextButton(
@@ -184,11 +184,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(_ResumeChoice.fresh),
-              child: const Text('Naya Start Karo'),
+              child: const Text('Start New'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(_ResumeChoice.resume),
-              child: const Text('Resume Karo'),
+              child: const Text('Resume'),
             ),
           ],
         ),
@@ -222,11 +222,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
       final choice = await showDialog<_ResumeChoice>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Pichla attempt mila'),
+          title: const Text('Previous attempt found'),
           content: Text(
-            'Is test ka ek attempt pehle se chal raha hai '
-            '(${_formatElapsed(inProgress.elapsedSeconds)} ho chuke hain). '
-            'Wahin se jaari rakhein ya naya shuru karein?',
+            'You already have an attempt in progress for this test '
+            '(${_formatElapsed(inProgress.elapsedSeconds)} so far). '
+            'Continue from where you left off, or start over?',
           ),
           actions: [
             TextButton(
@@ -235,11 +235,11 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(_ResumeChoice.fresh),
-              child: const Text('Naya Start Karo'),
+              child: const Text('Start New'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(_ResumeChoice.resume),
-              child: const Text('Resume Karo'),
+              child: const Text('Resume'),
             ),
           ],
         ),
