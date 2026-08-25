@@ -80,6 +80,41 @@ class ExamCatalogRepository {
     return rows.map((row) => ExamNode.fromMap(row)).toList();
   }
 
+  /// Same catalog as [fetchTopLevelExamNames]/[fetchTopLevelExams] but for
+  /// the Syllabus flow, which isn't gated by Mock Test/PYQ `types` at all —
+  /// it just walks the whole admin-managed exam/paper tree (same nodes,
+  /// same logos) regardless of which of those two flows a node is tagged
+  /// visible under.
+  Future<List<ExamNode>> fetchTopLevelExamsForSyllabus({
+    List<String>? allowedNames,
+  }) async {
+    var query = _client
+        .from('exams')
+        .select()
+        .eq('active', true)
+        .filter('parent_exam_id', 'is', null);
+    if (allowedNames != null && allowedNames.isNotEmpty) {
+      query = query.inFilter('name', allowedNames);
+    }
+    final rows = await query
+        .order('open_count', ascending: false)
+        .order('sort_order');
+    return rows.map((row) => ExamNode.fromMap(row)).toList();
+  }
+
+  /// Syllabus-flow counterpart to [fetchPapers] — same "type"-less stance
+  /// as [fetchTopLevelExamsForSyllabus] above.
+  Future<List<ExamNode>> fetchChildrenForSyllabus(String parentExamId) async {
+    final rows = await _client
+        .from('exams')
+        .select()
+        .eq('active', true)
+        .eq('parent_exam_id', parentExamId)
+        .order('open_count', ascending: false)
+        .order('sort_order');
+    return rows.map((row) => ExamNode.fromMap(row)).toList();
+  }
+
   /// Fire-and-forget: bumps the folder's `open_count` by 1 every time a
   /// student taps into it. Runs via a security-definer RPC since
   /// authenticated clients can only SELECT on `exams`, not UPDATE

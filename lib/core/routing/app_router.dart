@@ -28,7 +28,10 @@ import '../../features/mock_test/presentation/screens/take_test_screen.dart';
 import '../../features/mock_test/presentation/screens/test_set_list_screen.dart';
 import '../../features/notepad/presentation/screens/notepad_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
-import '../../features/syllabus/presentation/screens/syllabus_screen.dart';
+import '../../features/syllabus/presentation/screens/syllabus_exam_list_screen.dart';
+import '../../features/syllabus/presentation/screens/syllabus_level_screen.dart';
+import '../../features/syllabus/presentation/screens/syllabus_topics_screen.dart';
+import '../../features/syllabus/presentation/syllabus_navigation.dart';
 import '../../features/timetable/presentation/screens/timetable_screen.dart';
 import '../models/exam_node.dart';
 import '../models/test_attempt.dart';
@@ -64,6 +67,8 @@ const _requiresAuth = [
   '/mock-test/subjects/blocks',
   '/pyq',
   '/syllabus',
+  '/syllabus/level',
+  '/syllabus/topics',
   '/dictionary',
   '/timetable',
   '/notepad',
@@ -215,9 +220,25 @@ final appRouter = GoRouter(
         subject: state.uri.queryParameters['subject'] ?? '',
       ),
     ),
+    // ── Syllabus catalog ──
+    // Reuses the exact same admin-managed exam/paper tree (and screens'
+    // look) as Mock Test/PYQ — SyllabusExamListScreen/SyllabusLevelScreen
+    // walk it exactly like ExamListScreen/PaperListScreen do, just landing
+    // on SyllabusTopicsScreen (the full syllabus for that paper) at a leaf
+    // instead of a test-set list.
     GoRoute(
       path: '/syllabus',
-      builder: (context, state) => const SyllabusScreen(),
+      builder: (context, state) => const SyllabusExamListScreen(),
+    ),
+    GoRoute(
+      path: '/syllabus/level',
+      builder: (context, state) =>
+          SyllabusLevelScreen(args: state.extra as SyllabusLevelArgs),
+    ),
+    GoRoute(
+      path: '/syllabus/topics',
+      builder: (context, state) =>
+          SyllabusTopicsScreen(args: state.extra as SyllabusTopicsArgs),
     ),
     GoRoute(
       path: '/dictionary',

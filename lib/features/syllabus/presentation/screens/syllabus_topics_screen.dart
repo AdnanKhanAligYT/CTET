@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/syllabus_topic.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/primary_button.dart';
-import '../../../profile/application/profile_controller.dart';
+import '../../../../core/widgets/load_error.dart';
 import '../../data/syllabus_repository.dart';
 import '../../domain/topic_status.dart';
+import '../syllabus_navigation.dart';
 
-class SyllabusScreen extends ConsumerStatefulWidget {
-  const SyllabusScreen({super.key});
+/// Terminal screen of the Syllabus flow — reached once the student has
+/// drilled all the way down to a leaf (e.g. "Science(Hin Eng)") the same
+/// way they would in Mock Test/PYQ. Shows the *complete* syllabus for
+/// whichever paper that leaf falls under ([SyllabusTopicsArgs.paperExam],
+/// e.g. "CTET Paper 1") — not just that one leaf's slice — plus its
+/// marks-distribution table up top.
+class SyllabusTopicsScreen extends StatefulWidget {
+  const SyllabusTopicsScreen({super.key, required this.args});
+
+  final SyllabusTopicsArgs args;
 
   @override
-  ConsumerState<SyllabusScreen> createState() => _SyllabusScreenState();
+  State<SyllabusTopicsScreen> createState() => _SyllabusTopicsScreenState();
 }
 
-class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
+class _SyllabusTopicsScreenState extends State<SyllabusTopicsScreen> {
   final _repository = SyllabusRepository();
 
   bool _loading = true;
   String? _errorMessage;
   List<SyllabusTopic> _topics = const [];
   Map<String, TopicStatus> _progress = {};
+  List<List<String>>? _marksTable;
 
   @override
   void initState() {
@@ -32,27 +39,34 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
   }
 
   Future<void> _load() async {
-    final profile = await ref.read(userProfileProvider.future);
-    final exams = profile?.exams ?? const [];
-    if (exams.isEmpty) {
-      setState(() {
-        _loading = false;
-        _errorMessage =
-            'No exam selected yet — pick one in Edit Profile first.';
-      });
-      return;
-    }
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
-    final topics = await _repository.fetchTopicsForExams(exams);
-    final progress = await _repository.fetchProgress(user.id);
-    if (!mounted) return;
-    setState(() {
-      _topics = topics;
-      _progress = progress;
-      _loading = false;
-    });
+    try {
+      final topics = await _repository.fetchTopicsForExams([
+        widget.args.paperExam,
+      ]);
+      final progress = await _repository.fetchProgress(user.id);
+      final marksTable = await _repository.fetchMarksTable(
+        widget.args.paperExam,
+      );
+      if (!mounted) return;
+      setState(() {
+        _topics = topics;
+        _progress = progress;
+        _marksTable = marksTable;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = '$e';
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _cycleStatus(SyllabusTopic topic) async {
@@ -66,35 +80,25 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.args.paperExam;
+
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_errorMessage != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Syllabus')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_errorMessage!, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                PrimaryButton(
-                  label: 'Go to Profile',
-                  onPressed: () => context.push('/profile/edit'),
-                ),
-              ],
-            ),
-          ),
-        ),
+        appBar: AppBar(title: Text(title)),
+        body: LoadError(message: _errorMessage!, onRetry: _load),
       );
     }
 
-    if (_topics.isEmpty) {
+    if (_topics.isEmpty && _marksTable == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Syllabus')),
+        appBar: AppBar(title: Text(title)),
         body: const Center(
           child: Padding(
             padding: EdgeInsets.all(24),
@@ -119,26 +123,84 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Syllabus')),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            _ProgressHeader(done: doneCount, total: _topics.length),
-            const SizedBox(height: 24),
-            for (final entry in grouped.entries) ...[
-              Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
+            if (_marksTable != null) ...[
+              Text(
+                'Marks Distribution',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-              for (final topic in entry.value)
-                _TopicRow(
-                  topic: topic,
-                  status: _progress[topic.id] ?? TopicStatus.notStarted,
-                  onTap: () => _cycleStatus(topic),
+              _MarksTable(rows: _marksTable!),
+              const SizedBox(height: 24),
+            ],
+            if (_topics.isNotEmpty) ...[
+              _ProgressHeader(done: doneCount, total: _topics.length),
+              const SizedBox(height: 24),
+              for (final entry in grouped.entries) ...[
+                Text(
+                  entry.key,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                for (final topic in entry.value)
+                  _TopicRow(
+                    topic: topic,
+                    status: _progress[topic.id] ?? TopicStatus.notStarted,
+                    onTap: () => _cycleStatus(topic),
+                  ),
+                const SizedBox(height: 20),
+              ],
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MarksTable extends StatelessWidget {
+  const _MarksTable({required this.rows});
+
+  final List<List<String>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white24 : Colors.black26;
+    final headerFill = (isDark ? Colors.white : Colors.black).withValues(
+      alpha: 0.06,
+    );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        border: TableBorder.all(color: borderColor),
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        children: [
+          for (var r = 0; r < rows.length; r++)
+            TableRow(
+              decoration: r == 0 ? BoxDecoration(color: headerFill) : null,
+              children: [
+                for (final cell in rows[r])
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Text(
+                      cell,
+                      style: TextStyle(
+                        fontWeight: r == 0 ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+        ],
       ),
     );
   }

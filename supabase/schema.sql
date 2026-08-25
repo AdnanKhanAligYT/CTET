@@ -87,6 +87,19 @@ alter table public.syllabus_topics enable row level security;
 create policy "syllabus_topics: read for signed-in students" on public.syllabus_topics
   for select using (auth.role() = 'authenticated');
 
+-- The marks-distribution table shown above the topic list on the Syllabus
+-- screen — one row per paper (e.g. "CTET Paper 1"), table_data holding the
+-- same jsonb table shape as questions."table" (a list of rows, each row a
+-- list of cell strings, first row is the header).
+create table public.syllabus_marks_distribution (
+  exam text primary key,
+  table_data jsonb not null
+);
+
+alter table public.syllabus_marks_distribution enable row level security;
+create policy "syllabus_marks_distribution: read for signed-in students" on public.syllabus_marks_distribution
+  for select using (auth.role() = 'authenticated');
+
 create table public.dictionary_words (
   id uuid primary key default gen_random_uuid(),
   word text not null,

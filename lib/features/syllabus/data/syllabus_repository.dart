@@ -58,4 +58,22 @@ class SyllabusRepository {
         .from('syllabus_progress')
         .upsert(data, onConflict: 'user_id,topic_id');
   }
+
+  /// The marks-distribution table shown above the topic list (e.g. "CTET
+  /// Paper 1" -> Child Development 30, Mathematics 30, ...). Admin-managed,
+  /// one row per paper — null when nothing's been added for [exam] yet, so
+  /// the screen can just skip rendering the table instead of erroring.
+  Future<List<List<String>>?> fetchMarksTable(String exam) async {
+    final rows = await _client
+        .from('syllabus_marks_distribution')
+        .select()
+        .eq('exam', exam)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    final raw = rows.first['table_data'] as List?;
+    if (raw == null) return null;
+    return raw
+        .map((row) => (row as List).map((cell) => cell.toString()).toList())
+        .toList();
+  }
 }
