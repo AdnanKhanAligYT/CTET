@@ -69,7 +69,7 @@ class _SyllabusExamListScreenState
         context: context,
         repository: _repository,
         node: exam,
-        paperExam: null,
+        marksExamFallback: exam.name,
       );
     } catch (e) {
       if (!mounted) return;

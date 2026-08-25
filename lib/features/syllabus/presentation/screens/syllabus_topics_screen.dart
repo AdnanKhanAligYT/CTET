@@ -10,10 +10,11 @@ import '../syllabus_navigation.dart';
 
 /// Terminal screen of the Syllabus flow — reached once the student has
 /// drilled all the way down to a leaf (e.g. "Science(Hin Eng)") the same
-/// way they would in Mock Test/PYQ. Shows the *complete* syllabus for
-/// whichever paper that leaf falls under ([SyllabusTopicsArgs.paperExam],
-/// e.g. "CTET Paper 1") — not just that one leaf's slice — plus its
-/// marks-distribution table up top.
+/// way they would in Mock Test/PYQ. [resolveSyllabusTopicTags] decomposes
+/// that leaf's own name into the Child Development & Pedagogy + subject +
+/// Language I/II tags that make up its syllabus; the marks-distribution
+/// table shown above it comes from the leaf's parent folder instead
+/// ([SyllabusTopicsArgs.marksExam], e.g. "CTET Paper 2").
 class SyllabusTopicsScreen extends StatefulWidget {
   const SyllabusTopicsScreen({super.key, required this.args});
 
@@ -46,12 +47,12 @@ class _SyllabusTopicsScreenState extends State<SyllabusTopicsScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
-      final topics = await _repository.fetchTopicsForExams([
-        widget.args.paperExam,
-      ]);
+      final topics = await _repository.fetchTopicsForExams(
+        resolveSyllabusTopicTags(widget.args.node.name),
+      );
       final progress = await _repository.fetchProgress(user.id);
       final marksTable = await _repository.fetchMarksTable(
-        widget.args.paperExam,
+        widget.args.marksExam,
       );
       if (!mounted) return;
       setState(() {
@@ -80,7 +81,7 @@ class _SyllabusTopicsScreenState extends State<SyllabusTopicsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.args.paperExam;
+    final title = widget.args.node.name;
 
     if (_loading) {
       return Scaffold(

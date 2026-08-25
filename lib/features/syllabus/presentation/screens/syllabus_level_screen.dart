@@ -10,8 +10,7 @@ import '../syllabus_navigation.dart';
 /// Recursive middle screen in the Syllabus flow — mirrors
 /// mock_test/presentation/screens/paper_list_screen.dart exactly (same
 /// "does this node have children" branch, pushed once per level the admin
-/// actually created), just carrying [SyllabusLevelArgs.paperExam] down
-/// instead of a Mock Test/PYQ `type`.
+/// actually created).
 class SyllabusLevelScreen extends StatefulWidget {
   const SyllabusLevelScreen({super.key, required this.args});
 
@@ -65,7 +64,7 @@ class _SyllabusLevelScreenState extends State<SyllabusLevelScreen> {
         context: context,
         repository: _repository,
         node: node,
-        paperExam: widget.args.paperExam,
+        marksExamFallback: widget.args.parent.name,
       );
     } catch (e) {
       if (!mounted) return;
