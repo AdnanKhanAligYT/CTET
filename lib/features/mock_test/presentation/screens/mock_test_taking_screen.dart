@@ -350,19 +350,19 @@ class _MockTestTakingScreenState extends State<MockTestTakingScreen>
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Test chhodke jana hai?'),
+        title: const Text('Do you want to leave the test?'),
         content: const Text(
-          'Aapki progress save ho gayi hai — baad mein isi test ko khol ke '
-          'wahin se jaari rakh sakte hain.',
+          'Your progress has been saved — you can open this test later '
+          'and continue from where you left off.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Test Mein Rahein'),
+            child: const Text('Stay in Test'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Chhod Dein'),
+            child: const Text('Leave'),
           ),
         ],
       ),
