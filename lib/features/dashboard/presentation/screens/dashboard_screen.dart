@@ -202,6 +202,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     onTap: () => context.push('/pyq'),
                   ),
                   const SizedBox(height: 12),
+                  _QuickLinkTile(
+                    icon: Icons.description_outlined,
+                    color: AppColors.tileNotes,
+                    title: 'Notes',
+                    subtitle: 'Chapter-wise study notes',
+                    onTap: () => context.push('/notes'),
+                  ),
+                  const SizedBox(height: 12),
                   const Center(child: AppBannerAd()),
                   const SizedBox(height: 12),
                   _QuickLinkTile(

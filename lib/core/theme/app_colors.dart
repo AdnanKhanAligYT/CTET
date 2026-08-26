@@ -44,6 +44,7 @@ class AppColors {
   static const tileTimetable = Color(0xFF4C3FCF);
   static const tileNotepad = Color(0xFFB5541F);
   static const tileHistory = Color(0xFF6B7280);
+  static const tileNotes = Color(0xFFDB2777);
 
   /// Mock Test navigator's 4 question states — same convention every
   /// competitive-exam software uses, so it reads as familiar rather than

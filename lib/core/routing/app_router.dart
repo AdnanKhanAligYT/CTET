@@ -27,11 +27,15 @@ import '../../features/mock_test/presentation/screens/subject_revision_list_scre
 import '../../features/mock_test/presentation/screens/take_test_screen.dart';
 import '../../features/mock_test/presentation/screens/test_set_list_screen.dart';
 import '../../features/notepad/presentation/screens/notepad_screen.dart';
+import '../../features/notes/presentation/screens/notes_chapter_list_screen.dart';
+import '../../features/notes/presentation/screens/notes_content_screen.dart';
+import '../../features/notes/presentation/screens/notes_subject_list_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/syllabus/presentation/screens/syllabus_topics_screen.dart';
 import '../../features/syllabus/presentation/syllabus_navigation.dart';
 import '../../features/timetable/presentation/screens/timetable_screen.dart';
 import '../models/exam_node.dart';
+import '../models/notes_chapter.dart';
 import '../models/test_attempt.dart';
 import '../models/test_set.dart';
 import 'go_router_refresh_stream.dart';
@@ -68,6 +72,9 @@ const _requiresAuth = [
   '/dictionary',
   '/timetable',
   '/notepad',
+  '/notes',
+  '/notes/chapters',
+  '/notes/content',
   '/history',
 ];
 
@@ -236,6 +243,23 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/notepad',
       builder: (context, state) => const NotepadScreen(),
+    ),
+    // ── Notes ──
+    // Fixed subject list (NotesSubjectListScreen, no fetch) -> admin-added
+    // chapters for that subject -> the chapter's own content.
+    GoRoute(
+      path: '/notes',
+      builder: (context, state) => const NotesSubjectListScreen(),
+    ),
+    GoRoute(
+      path: '/notes/chapters',
+      builder: (context, state) =>
+          NotesChapterListScreen(subject: state.extra as String),
+    ),
+    GoRoute(
+      path: '/notes/content',
+      builder: (context, state) =>
+          NotesContentScreen(chapter: state.extra as NotesChapter),
     ),
     GoRoute(
       path: '/history',
