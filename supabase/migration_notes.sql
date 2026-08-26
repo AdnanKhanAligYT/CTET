@@ -28,8 +28,8 @@
 create table public.notes_chapters (
   id uuid primary key default gen_random_uuid(),
   -- Must match one of the static subjects in notes_subjects.dart exactly
-  -- (e.g. "Mathematics Paper-1", "Hindi 1st") — not enforced by a DB
-  -- constraint since the list lives in the app, not a lookup table.
+  -- (e.g. "Mathematics", "Hindi") — not enforced by a DB constraint since
+  -- the list lives in the app, not a lookup table.
   subject text not null,
   -- Optional grouping shown above chapter_name in the chapter list (e.g.
   -- "Unit 1") — purely a label, doesn't affect sorting on its own.

@@ -12,8 +12,7 @@
 /// or heading noting "Language I only"), not by a separate subject.
 const notesSubjects = [
   'CDP',
-  'Mathematics Paper-1',
-  'Mathematics Paper-2',
+  'Mathematics',
   'Science',
   'EVS',
   'English',
