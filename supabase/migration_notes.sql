@@ -4,18 +4,27 @@
 --
 -- The subject list itself is STATIC, hardcoded in the app
 -- (lib/features/notes/domain/notes_subjects.dart) — not a table, since it
--- never changes. Only what's INSIDE a subject (its chapters, and each
--- chapter's content) is admin-managed data here.
+-- never changes. Only what's INSIDE a subject (its chapters) is
+-- admin-managed data here.
 --
--- A chapter's content is an ordered list of typed blocks (notes_blocks,
--- one row per block, `sort_order` decides render order top to bottom).
--- `block_type` decides how `content` (jsonb) is shaped — see
--- supabase/seed_notes_example.sql for a worked example of every type.
--- Any free-text field inside `content` (a heading's/paragraph's/point's
--- text, an example's question/options/explanation) may contain **word**
--- to render that word bold — same convention everywhere, parsed by the
--- app, not stored as separate markup.
-
+-- A chapter's ENTIRE content lives as one jsonb array on its own row
+-- (`content` below) — not spread across separate child rows — so it's
+-- editable in Study App's admin panel as a single JSON blob per chapter,
+-- one paste/edit replaces that whole chapter's content in one go.
+--
+-- `content` is an array of blocks, each shaped {"type": "...", "data": {...}}:
+--   heading    data: {"text": "..."}
+--   subheading data: {"text": "..."}
+--   paragraph  data: {"text": "..."}
+--   points     data: {"items": ["...", "..."]}                          (bullet list)
+--   table      data: {"rows": [["h1","h2"], ["a","b"]]}                 (first row = header)
+--   image      data: {"url": "...", "caption": "..."}                  (caption optional)
+--   pdf_file   data: {"url": "...", "name": "..."}                     (uploaded to the notes-pdfs bucket below)
+--   pdf_link   data: {"url": "https://drive.google.com/...", "name": "..."}  (external Drive link)
+--   example    data: {"question": "...", "options": ["...","...","...","..."],
+--                      "correct_index": 0, "explanation": "..."}       (options/correct_index/explanation optional)
+-- Any free-text field inside a block's data may contain **word** for
+-- inline bold, same convention everywhere.
 create table public.notes_chapters (
   id uuid primary key default gen_random_uuid(),
   -- Must match one of the static subjects in notes_subjects.dart exactly
@@ -27,7 +36,8 @@ create table public.notes_chapters (
   unit text,
   chapter_number int,
   chapter_name text not null,
-  sort_order int not null default 0
+  sort_order int not null default 0,
+  content jsonb not null default '[]'::jsonb
 );
 
 create index notes_chapters_subject_idx on public.notes_chapters (subject, sort_order);
@@ -36,35 +46,10 @@ alter table public.notes_chapters enable row level security;
 create policy "notes_chapters: read for signed-in students" on public.notes_chapters
   for select using (auth.role() = 'authenticated');
 
--- block_type is one of:
---   'heading'    content: {"text": "..."}
---   'subheading' content: {"text": "..."}
---   'paragraph'  content: {"text": "..."}
---   'points'     content: {"items": ["...", "..."]}                  (bullet list)
---   'table'      content: {"rows": [["h1","h2"], ["a","b"]]}          (first row = header)
---   'image'      content: {"url": "...", "caption": "..."}           (caption optional)
---   'pdf_file'   content: {"url": "...", "name": "..."}              (uploaded to the notes-pdfs bucket below)
---   'pdf_link'   content: {"url": "https://drive.google.com/...", "name": "..."}  (external Drive link)
---   'example'    content: {"question": "...", "options": ["...","...","...","..."],
---                          "correct_index": 0, "explanation": "..."}  (options/correct_index/explanation optional)
-create table public.notes_blocks (
-  id uuid primary key default gen_random_uuid(),
-  chapter_id uuid not null references public.notes_chapters (id) on delete cascade,
-  block_type text not null,
-  content jsonb not null,
-  sort_order int not null default 0
-);
-
-create index notes_blocks_chapter_idx on public.notes_blocks (chapter_id, sort_order);
-
-alter table public.notes_blocks enable row level security;
-create policy "notes_blocks: read for signed-in students" on public.notes_blocks
-  for select using (auth.role() = 'authenticated');
-
 -- Uploaded PDF files (see the 'pdf_file' block type) — public so the app
 -- can open them with a plain network request, no auth header needed.
 -- Upload via Supabase Dashboard -> Storage -> notes-pdfs -> Upload file,
--- then copy its public URL into a 'pdf_file' block's content.url.
+-- then copy its public URL into a 'pdf_file' block's data.url.
 insert into storage.buckets (id, name, public)
 values ('notes-pdfs', 'notes-pdfs', true)
 on conflict (id) do nothing;

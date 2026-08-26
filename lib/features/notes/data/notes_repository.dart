@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import '../../../core/models/notes_block.dart';
 import '../../../core/models/notes_chapter.dart';
 
 class NotesRepository {
@@ -9,6 +8,9 @@ class NotesRepository {
 
   final SupabaseClient _client;
 
+  // Each row already carries its own full content (see NotesChapter), so
+  // fetching the chapter list is the only round-trip the whole Notes flow
+  // needs — NotesContentScreen just renders what's already in hand.
   Future<List<NotesChapter>> fetchChapters(String subject) async {
     final rows = await _client
         .from('notes_chapters')
@@ -16,14 +18,5 @@ class NotesRepository {
         .eq('subject', subject)
         .order('sort_order');
     return rows.map((row) => NotesChapter.fromMap(row)).toList();
-  }
-
-  Future<List<NotesBlock>> fetchBlocks(String chapterId) async {
-    final rows = await _client
-        .from('notes_blocks')
-        .select()
-        .eq('chapter_id', chapterId)
-        .order('sort_order');
-    return rows.map((row) => NotesBlock.fromMap(row)).toList();
   }
 }
