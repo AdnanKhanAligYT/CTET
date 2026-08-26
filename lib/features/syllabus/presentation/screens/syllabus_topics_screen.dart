@@ -8,13 +8,14 @@ import '../../data/syllabus_repository.dart';
 import '../../domain/topic_status.dart';
 import '../syllabus_navigation.dart';
 
-/// Terminal screen of the Syllabus flow — reached once the student has
-/// drilled all the way down to a leaf (e.g. "Science(Hin Eng)") the same
-/// way they would in Mock Test/PYQ. [resolveSyllabusTopicTags] decomposes
-/// that leaf's own name into the Child Development & Pedagogy + subject +
-/// Language I/II tags that make up its syllabus; the marks-distribution
-/// table shown above it comes from the leaf's parent folder instead
-/// ([SyllabusTopicsArgs.marksExam], e.g. "CTET Paper 2").
+/// Only screen in the Syllabus flow — reached from the "Syllabus" button on
+/// the Mock Test/PYQ test-set list, for that exact same leaf (e.g.
+/// "Science(Hin Eng)"). [resolveSyllabusTopicTags] decomposes the leaf's
+/// own name into the Child Development & Pedagogy + subject + Language
+/// I/II tags that make up its syllabus; the marks-distribution table shown
+/// above it comes from [SyllabusTopicsArgs.marksExam] (e.g. "CTET Paper 2")
+/// instead, since that's a real folder in the admin catalog and the leaf
+/// itself isn't.
 class SyllabusTopicsScreen extends StatefulWidget {
   const SyllabusTopicsScreen({super.key, required this.args});
 

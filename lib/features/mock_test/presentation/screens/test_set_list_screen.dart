@@ -10,6 +10,7 @@ import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
+import '../../../syllabus/presentation/syllabus_navigation.dart';
 import '../../data/mock_test_local_store.dart';
 import '../../data/student_shortcut_repository.dart';
 import '../../data/test_set_repository.dart';
@@ -266,25 +267,82 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     return '$minutes minute';
   }
 
+  // Opens straight into the syllabus for this exact leaf (e.g.
+  // "Science(Hin Eng)"), skipping the exam/paper picker entirely — this
+  // screen already sits on the same admin-managed leaf that Syllabus keys
+  // its content on, so there's nothing left to pick.
+  void _openSyllabus() {
+    context.push(
+      '/syllabus/topics',
+      extra: SyllabusTopicsArgs(
+        node: widget.paper,
+        marksExam: resolveSyllabusMarksExam(widget.paper.name),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    late final Widget content;
     if (_loading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.paper.name),
-          actions: _shortcutActions,
+      content = const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      content = LoadError(message: _error!, onRetry: _load);
+    } else if (_sets.isEmpty) {
+      content = const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Is paper ke test abhi add nahi hue.',
+            textAlign: TextAlign.center,
+          ),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.paper.name),
-          actions: _shortcutActions,
-        ),
-        body: LoadError(message: _error!, onRetry: _load),
+    } else {
+      content = ListView.builder(
+        padding: const EdgeInsets.all(24),
+        itemCount: _sets.length,
+        itemBuilder: (context, index) {
+          final set = _sets[index];
+          final isFree = index == 0;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: NetworkLogoAvatar(
+                url: set.logoUrl,
+                fallbackIcon: Icons.quiz_outlined,
+                fallbackColor: AppColors.tileMockTest,
+              ),
+              // Shrunk to fit a long name (e.g. "7 Feb 26(Science
+              // (Hin Urdu))") on one line on any device width,
+              // instead of a fixed size that wraps to two lines.
+              title: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  set.name,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              subtitle: Text(
+                [
+                  set.subjects.join(', '),
+                  if (set.timeLimitMinutes != null)
+                    '${set.timeLimitMinutes} min',
+                  if (set.year != null) '${set.year}',
+                ].where((s) => s.isNotEmpty).join(' · '),
+              ),
+              trailing: isFree
+                  ? const Icon(Icons.chevron_right)
+                  : const Icon(Icons.lock_outline, size: 20),
+              enabled: !_opening,
+              onTap: () => _open(set, isFree: isFree),
+            ),
+          );
+        },
       );
     }
 
@@ -294,60 +352,38 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
         actions: _shortcutActions,
       ),
       body: SafeArea(
-        child: _sets.isEmpty
-            ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Is paper ke test abhi add nahi hue.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(24),
-                itemCount: _sets.length,
-                itemBuilder: (context, index) {
-                  final set = _sets[index];
-                  final isFree = index == 0;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: NetworkLogoAvatar(
-                        url: set.logoUrl,
-                        fallbackIcon: Icons.quiz_outlined,
-                        fallbackColor: AppColors.tileMockTest,
-                      ),
-                      // Shrunk to fit a long name (e.g. "7 Feb 26(Science
-                      // (Hin Urdu))") on one line on any device width,
-                      // instead of a fixed size that wraps to two lines.
-                      title: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          set.name,
-                          maxLines: 1,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      subtitle: Text(
-                        [
-                          set.subjects.join(', '),
-                          if (set.timeLimitMinutes != null)
-                            '${set.timeLimitMinutes} min',
-                          if (set.year != null) '${set.year}',
-                        ].where((s) => s.isNotEmpty).join(' · '),
-                      ),
-                      trailing: isFree
-                          ? const Icon(Icons.chevron_right)
-                          : const Icon(Icons.lock_outline, size: 20),
-                      enabled: !_opening,
-                      onTap: () => _open(set, isFree: isFree),
-                    ),
-                  );
-                },
-              ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+              child: _SyllabusButton(onTap: _openSyllabus),
+            ),
+            Expanded(child: content),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SyllabusButton extends StatelessWidget {
+  const _SyllabusButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.checklist_outlined),
+        label: const Text('Syllabus'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.tileSyllabus,
+          side: BorderSide(color: AppColors.tileSyllabus),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
       ),
     );
   }

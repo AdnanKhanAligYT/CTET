@@ -213,14 +213,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                   const SizedBox(height: 12),
                   _QuickLinkTile(
-                    icon: Icons.checklist_outlined,
-                    color: AppColors.tileSyllabus,
-                    title: 'Syllabus Tracker',
-                    subtitle: 'Mark topics as you cover them',
-                    onTap: () => context.push('/syllabus'),
-                  ),
-                  const SizedBox(height: 12),
-                  _QuickLinkTile(
                     icon: Icons.menu_book_outlined,
                     color: AppColors.tileDictionary,
                     title: 'Dictionary',
