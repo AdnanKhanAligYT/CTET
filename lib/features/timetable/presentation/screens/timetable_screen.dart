@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/timetable_repository.dart';
@@ -86,6 +87,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Timetable')),
       floatingActionButton: FloatingActionButton(
         onPressed: _openAddSheet,

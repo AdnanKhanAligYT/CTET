@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/notes_chapter.dart';
+import '../../../../core/services/ad_service.dart';
 import '../widgets/notes_block_view.dart';
 
 /// Third and last screen of the Notes flow — the chapter's content,
@@ -14,6 +15,7 @@ class NotesContentScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(chapter.chapterName)),
       body: SafeArea(
         child: chapter.content.isEmpty

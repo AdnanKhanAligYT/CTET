@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/ad_service.dart';
 import '../../data/mock_test_repository.dart';
 import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
@@ -83,6 +84,7 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
     final blockCount = (_totalQuestions / _chunkSize).ceil();
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(widget.subject)),
       body: SafeArea(
         child: blockCount == 0

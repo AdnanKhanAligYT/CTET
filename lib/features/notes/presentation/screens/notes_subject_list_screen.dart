@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/ad_service.dart';
 import '../../../mock_test/presentation/subject_style.dart';
 import '../../domain/notes_subjects.dart';
 
@@ -14,6 +15,7 @@ class NotesSubjectListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Notes')),
       body: SafeArea(
         child: ListView.builder(

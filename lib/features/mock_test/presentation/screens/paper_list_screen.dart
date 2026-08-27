@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/exam_node.dart';
 import '../../../../core/models/test_set.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../../../core/widgets/network_logo_avatar.dart';
@@ -105,6 +106,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(widget.parent.name)),
       body: SafeArea(
         child: _papers.isEmpty

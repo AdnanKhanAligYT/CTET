@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/notepad_repository.dart';
@@ -73,6 +74,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   Widget build(BuildContext context) {
     final isEditing = widget.note != null;
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Note' : 'New Note'),
         actions: [

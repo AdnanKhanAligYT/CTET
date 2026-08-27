@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/notes_chapter.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../data/notes_repository.dart';
 
@@ -110,6 +111,7 @@ class _NotesChapterListScreenState extends State<NotesChapterListScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(widget.subject)),
       body: SafeArea(child: content),
     );

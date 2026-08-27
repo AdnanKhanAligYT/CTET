@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/question.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/mock_test_repository.dart';
 import '../../data/question_dedupe.dart';
@@ -95,6 +96,7 @@ class _SubjectRevisionListScreenState
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Subject Wise Revision')),
       body: SafeArea(
         child: _subjectCounts.isEmpty

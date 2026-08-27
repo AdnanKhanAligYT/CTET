@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/services/ad_service.dart';
 import '../../data/notepad_repository.dart';
 import '../../domain/note.dart';
 import 'note_editor_screen.dart';
@@ -48,6 +49,7 @@ class _NotepadScreenState extends State<NotepadScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Notepad')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openEditor(),

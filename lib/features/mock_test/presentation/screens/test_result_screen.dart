@@ -40,6 +40,7 @@ class _TestResultScreenState extends State<TestResultScreen> {
         ? 0
         : (widget.correctCount * 100 / attempted).round();
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Result')),
       body: SafeArea(
         child: Padding(

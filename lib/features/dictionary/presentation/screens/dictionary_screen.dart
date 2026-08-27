@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/dictionary_word.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/services/spaced_repetition_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/dictionary_repository.dart';
@@ -58,6 +59,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Dictionary')),
       body: SafeArea(
         child: _allWords.isEmpty

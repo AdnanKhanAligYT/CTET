@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/syllabus_topic.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../data/syllabus_repository.dart';
@@ -125,6 +126,7 @@ class _SyllabusTopicsScreenState extends State<SyllabusTopicsScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: ListView(

@@ -53,6 +53,7 @@ class _MockTestResultScreenState extends State<MockTestResultScreen> {
         : (attempt.correctCount * 100 / attempted).round();
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(
         title: const Text('Result'),
         automaticallyImplyLeading: false,

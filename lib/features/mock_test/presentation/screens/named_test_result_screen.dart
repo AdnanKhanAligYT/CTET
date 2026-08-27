@@ -39,6 +39,7 @@ class _NamedTestResultScreenState extends State<NamedTestResultScreen> {
         : (attempt.correctCount * 100 / attempted).round();
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Result')),
       body: SafeArea(
         child: Padding(

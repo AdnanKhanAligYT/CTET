@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/test_set.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import 'mock_test_taking_screen.dart';
 
@@ -48,6 +49,7 @@ class MockTestInstructionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(testSet.name)),
       body: SafeArea(
         child: Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/load_error.dart';
 import '../../data/history_repository.dart';
 import '../../domain/attempt.dart';
@@ -62,6 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('History')),
       body: SafeArea(
         child: _attempts.isEmpty

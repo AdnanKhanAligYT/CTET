@@ -347,6 +347,7 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     }
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(
         title: Text(widget.paper.name),
         actions: _shortcutActions,

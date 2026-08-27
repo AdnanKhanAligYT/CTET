@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/models/user_profile.dart';
+import '../../../../core/services/ad_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -233,6 +234,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final profile = _profile!;
 
     return Scaffold(
+      bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(
         title: Text(
           widget.isFirstTimeSetup ? 'Set Up Your Profile' : 'Edit Profile',
