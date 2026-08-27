@@ -6,15 +6,20 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../mock_test/presentation/screens/take_test_screen.dart';
 import '../../data/bullet_revision_repository.dart';
 
-/// Behind the dashboard's "Bullet Revision" tile: pick a duration (1
-/// minute = 1 CDP question, so "10 min" = 10 questions), then a "which
-/// paper" step to match the familiar Mock Test flow, then the test opens
-/// immediately in TakeTestScreen's format. The paper choice doesn't
-/// change the question pool — it's CDP-only either way (see
-/// BulletRevisionRepository) — the format is what's being matched here,
-/// same as Mock Test's exam -> paper -> test shape.
+/// Behind the dashboard's "Bullet Revision" tile, and also reachable via
+/// an admin push notification's "Bullet Revision" tap action (see
+/// [autostartMinutes]): pick a duration (1 minute = 1 CDP question, so
+/// "10 min" = 10 questions) and the test opens immediately in
+/// TakeTestScreen's format — no intermediate picker, since the content
+/// is CDP-only either way (see BulletRevisionRepository), there's nothing
+/// left to choose once a duration is picked.
 class BulletRevisionScreen extends StatefulWidget {
-  const BulletRevisionScreen({super.key});
+  const BulletRevisionScreen({super.key, this.autostartMinutes});
+
+  /// Set when opened from a notification's deep link — starts that
+  /// duration's test immediately on open, same as tapping its button
+  /// would, so the notification lands the student straight in the test.
+  final int? autostartMinutes;
 
   @override
   State<BulletRevisionScreen> createState() => _BulletRevisionScreenState();
@@ -31,38 +36,18 @@ class _BulletRevisionScreenState extends State<BulletRevisionScreen> {
   void initState() {
     super.initState();
     _loadCounts();
+    final autostart = widget.autostartMinutes;
+    if (autostart != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _startTest(autostart),
+      );
+    }
   }
 
   Future<void> _loadCounts() async {
     final counts = await _repository.fetchDurationOpenCounts();
     if (!mounted) return;
     setState(() => _openCounts = counts);
-  }
-
-  Future<void> _pickDuration(int minutes) async {
-    if (_starting) return;
-    final questionWord = minutes == 1 ? 'question' : 'questions';
-    final chosen = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose Paper'),
-        content: Text(
-          '$minutes-minute Bullet Revision — $minutes CDP $questionWord.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Paper 1st'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Paper 2nd'),
-          ),
-        ],
-      ),
-    );
-    if (chosen != true || !mounted) return;
-    await _startTest(minutes);
   }
 
   Future<void> _startTest(int minutes) async {
@@ -127,7 +112,7 @@ class _BulletRevisionScreenState extends State<BulletRevisionScreen> {
                       color: AppColors.bulletRevisionDurations[index],
                       openCount: _openCounts[minutes] ?? 0,
                       enabled: !_starting,
-                      onTap: () => _pickDuration(minutes),
+                      onTap: () => _startTest(minutes),
                     );
                   },
                 ),

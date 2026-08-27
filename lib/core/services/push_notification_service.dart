@@ -76,6 +76,19 @@ class PushNotificationService {
         if (id != null && id.isNotEmpty) {
           appRouter.push('/mock-test/open?id=${Uri.encodeComponent(id)}');
         }
+      case 'bullet_revision':
+        final minutes = data['duration_minutes'] as String?;
+        if (minutes != null && minutes.isNotEmpty) {
+          appRouter.push('/bullet-revision?duration=$minutes');
+        }
+      case 'subject_block':
+        final subject = data['subject'] as String?;
+        final block = data['block_index'] as String?;
+        if (subject != null && subject.isNotEmpty && block != null) {
+          appRouter.push(
+            '/mock-test/take?subject=${Uri.encodeComponent(subject)}&block=$block',
+          );
+        }
       case 'url':
         final url = data['url'] as String?;
         if (url != null && url.isNotEmpty) {

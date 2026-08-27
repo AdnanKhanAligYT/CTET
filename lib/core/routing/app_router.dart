@@ -269,7 +269,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/bullet-revision',
-      builder: (context, state) => const BulletRevisionScreen(),
+      builder: (context, state) => BulletRevisionScreen(
+        autostartMinutes: int.tryParse(
+          state.uri.queryParameters['duration'] ?? '',
+        ),
+      ),
     ),
   ],
 );
