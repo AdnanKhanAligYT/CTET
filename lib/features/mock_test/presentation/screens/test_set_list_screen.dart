@@ -136,7 +136,7 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     if (isFree) {
       await _proceedOpen(uid, set);
     } else {
-      AdService.showBeforeOpeningTest(() => _proceedOpen(uid, set));
+      AdService.showBeforeOpeningContent(() => _proceedOpen(uid, set));
     }
   }
 
@@ -272,13 +272,16 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
   // screen already sits on the same admin-managed leaf that Syllabus keys
   // its content on, so there's nothing left to pick.
   void _openSyllabus() {
-    context.push(
-      '/syllabus/topics',
-      extra: SyllabusTopicsArgs(
-        node: widget.paper,
-        marksExam: resolveSyllabusMarksExam(widget.paper.name),
-      ),
-    );
+    AdService.showBeforeOpeningContent(() {
+      if (!mounted) return;
+      context.push(
+        '/syllabus/topics',
+        extra: SyllabusTopicsArgs(
+          node: widget.paper,
+          marksExam: resolveSyllabusMarksExam(widget.paper.name),
+        ),
+      );
+    });
   }
 
   @override

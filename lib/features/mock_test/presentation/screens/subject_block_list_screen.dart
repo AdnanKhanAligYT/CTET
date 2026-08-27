@@ -120,8 +120,10 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                       ),
                       subtitle: Text('${end - start} questions'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push(
-                        '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=$index',
+                      onTap: () => AdService.showBeforeOpeningContent(
+                        () => context.push(
+                          '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=$index',
+                        ),
                       ),
                     ),
                   );

@@ -20,6 +20,18 @@ class AdService {
 
   static bool _initialized = false;
   static InterstitialAd? _interstitial;
+  static DateTime? _lastInterstitialShownAt;
+
+  /// Minimum gap between two interstitials, regardless of which trigger
+  /// fired them — without this, a student who finishes a test (ad after
+  /// the result) and immediately taps "View Syllabus" or a revision block
+  /// (ad before opening) would see two full-screen ads back to back.
+  static const _interstitialCooldown = Duration(seconds: 75);
+
+  static bool get _cooledDown {
+    final last = _lastInterstitialShownAt;
+    return last == null || DateTime.now().difference(last) >= _interstitialCooldown;
+  }
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -55,24 +67,30 @@ class AdService {
     );
   }
 
-  /// Shows a preloaded interstitial if one's ready; silently does nothing
-  /// otherwise (e.g. no network, or still loading) — a missing ad should
-  /// never block a student from seeing their mock test result.
+  /// Shows a preloaded interstitial if one's ready (and the cooldown has
+  /// elapsed); silently does nothing otherwise (e.g. no network, still
+  /// loading, or an ad was shown too recently) — a missing ad should never
+  /// block a student from seeing their mock test result.
   static void showAfterMockTest() {
-    _interstitial?.show();
+    final ad = _interstitial;
+    if (ad == null || !_cooledDown) return;
+    _lastInterstitialShownAt = DateTime.now();
+    ad.show();
   }
 
-  /// Gate before opening a locked (non-free) test: shows a preloaded
-  /// interstitial and calls [onFinished] once it's dismissed. Same
-  /// fail-open stance as [showAfterMockTest] — no ad ready (no network,
-  /// still loading) means [onFinished] fires immediately rather than
-  /// blocking the student from the test they tapped.
-  static void showBeforeOpeningTest(VoidCallback onFinished) {
+  /// Gate before opening locked/gated content (a non-free test, a
+  /// revision block, the syllabus, ...): shows a preloaded interstitial
+  /// and calls [onFinished] once it's dismissed. Same fail-open stance as
+  /// [showAfterMockTest] — no ad ready (no network, still loading, or the
+  /// cooldown hasn't elapsed) means [onFinished] fires immediately rather
+  /// than blocking the student from the content they tapped.
+  static void showBeforeOpeningContent(VoidCallback onFinished) {
     final ad = _interstitial;
-    if (ad == null) {
+    if (ad == null || !_cooledDown) {
       onFinished();
       return;
     }
+    _lastInterstitialShownAt = DateTime.now();
     _interstitial = null;
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
