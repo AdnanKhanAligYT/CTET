@@ -45,6 +45,19 @@ class AppColors {
   static const tileNotepad = Color(0xFFB5541F);
   static const tileHistory = Color(0xFF6B7280);
   static const tileNotes = Color(0xFFDB2777);
+  static const tileBulletRevision = Color(0xFFE0433D);
+
+  /// The 6 Bullet Revision duration buttons (1/5/10/20/30/60 min) — one
+  /// distinct color each, reusing the existing tile palette above so the
+  /// screen stays eye-catching without introducing brand-new colors.
+  static const bulletRevisionDurations = [
+    tileMockTest,
+    tilePyq,
+    tileSyllabus,
+    tileDictionary,
+    tileTimetable,
+    tileNotepad,
+  ];
 
   /// Mock Test navigator's 4 question states — same convention every
   /// competitive-exam software uses, so it reads as familiar rather than

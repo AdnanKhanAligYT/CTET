@@ -31,15 +31,31 @@ import 'test_result_screen.dart';
 /// once chosen, and a choice after each question to continue or stop and
 /// see the result.
 class TakeTestScreen extends ConsumerStatefulWidget {
-  const TakeTestScreen({super.key, this.subject, this.block});
+  const TakeTestScreen({
+    super.key,
+    this.subject,
+    this.block,
+    this.questionIds,
+    this.title,
+  });
 
   /// When set, this is a Subject Wise Revision run for this subject rather
-  /// than the daily due-today practice.
+  /// than the daily due-today practice. Ignored when [questionIds] is set.
   final String? subject;
 
   /// Which chunk-of-N block within [subject] to run (0-indexed) — see
   /// SubjectBlockListScreen. Ignored when [subject] is null.
   final int? block;
+
+  /// When set, this run uses exactly these questions, in this order,
+  /// instead of deriving a list from [subject]/[block] or the daily
+  /// due-today selection below — for a caller (Bullet Revision) that has
+  /// already picked which specific questions to run.
+  final List<String>? questionIds;
+
+  /// Overrides the app-bar title (Bullet Revision wants "Bullet Revision",
+  /// not the CDP subject name a plain subject-scoped run would show).
+  final String? title;
 
   @override
   ConsumerState<TakeTestScreen> createState() => _TakeTestScreenState();
@@ -71,6 +87,19 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
   Future<void> _load() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
+
+    final questionIds = widget.questionIds;
+    if (questionIds != null) {
+      final questions = await _repository.fetchQuestionsByIds(questionIds);
+      final progress = await _repository.fetchProgress(user.id);
+      if (!mounted) return;
+      setState(() {
+        _questions = questions;
+        _progress = progress;
+        _loading = false;
+      });
+      return;
+    }
 
     final subject = widget.subject;
     if (subject == null) {
@@ -227,7 +256,7 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenTitle = widget.subject ?? 'Mock Test';
+    final screenTitle = widget.title ?? widget.subject ?? 'Mock Test';
 
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -262,7 +291,9 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              widget.subject == null
+              widget.questionIds != null
+                  ? 'Abhi CDP ke questions upload nahi hue.'
+                  : widget.subject == null
                   ? 'No questions due today — you\'re all caught up! Check back tomorrow.'
                   : 'Is subject ke abhi questions upload nahi hue.',
               textAlign: TextAlign.center,

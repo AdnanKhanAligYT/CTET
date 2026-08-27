@@ -132,6 +132,7 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
+    _repository.recordTestSetOpened(set.id);
     setState(() => _opening = true);
     if (isFree) {
       await _proceedOpen(uid, set);
@@ -339,6 +340,7 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
                   if (set.timeLimitMinutes != null)
                     '${set.timeLimitMinutes} min',
                   if (set.year != null) '${set.year}',
+                  'Opened ${set.openCount}x',
                 ].where((s) => s.isNotEmpty).join(' · '),
               ),
               trailing: isFree

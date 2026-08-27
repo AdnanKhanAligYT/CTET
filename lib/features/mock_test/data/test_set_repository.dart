@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/question.dart';
@@ -26,6 +28,19 @@ class TestSetRepository {
         .eq('active', true)
         .order('sort_order');
     return rows.map((row) => TestSet.fromMap(row)).toList();
+  }
+
+  /// Fire-and-forget: bumps this test's `open_count` by 1 every time a
+  /// student taps it — same RPC pattern as
+  /// ExamCatalogRepository.recordExamOpened (students can only SELECT on
+  /// test_sets, not UPDATE). Never awaited and errors are swallowed — a
+  /// missed count shouldn't block opening the test.
+  void recordTestSetOpened(String setId) {
+    unawaited(
+      _client
+          .rpc('increment_test_set_open_count', params: {'p_test_set_id': setId})
+          .catchError((_) {}),
+    );
   }
 
   /// A single TestSet by id, with no exam/type filtering — used by a

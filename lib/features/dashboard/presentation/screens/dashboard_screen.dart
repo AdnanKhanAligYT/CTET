@@ -210,6 +210,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     onTap: () => context.push('/notes'),
                   ),
                   const SizedBox(height: 12),
+                  _QuickLinkTile(
+                    icon: Icons.bolt,
+                    color: AppColors.tileBulletRevision,
+                    title: 'Bullet Revision',
+                    subtitle: 'Pick your speed, CDP-only quick fire',
+                    onTap: () => context.push('/bullet-revision'),
+                  ),
+                  const SizedBox(height: 12),
                   const Center(child: AppBannerAd()),
                   const SizedBox(height: 12),
                   _QuickLinkTile(

@@ -11,6 +11,7 @@ import '../../features/auth/presentation/screens/otp_verify_screen.dart';
 import '../../features/auth/presentation/screens/phone_auth_screen.dart';
 import '../../features/auth/presentation/screens/suggested_name_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
+import '../../features/bullet_revision/presentation/screens/bullet_revision_screen.dart';
 import '../../features/dashboard/presentation/screens/home_gate.dart';
 import '../../features/dictionary/presentation/screens/dictionary_screen.dart';
 import '../../features/history/presentation/screens/history_screen.dart';
@@ -76,6 +77,7 @@ const _requiresAuth = [
   '/notes/chapters',
   '/notes/content',
   '/history',
+  '/bullet-revision',
 ];
 
 // Firebase.apps.isNotEmpty is a synchronous, already-initialized check —
@@ -264,6 +266,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/history',
       builder: (context, state) => const HistoryScreen(),
+    ),
+    GoRoute(
+      path: '/bullet-revision',
+      builder: (context, state) => const BulletRevisionScreen(),
     ),
   ],
 );

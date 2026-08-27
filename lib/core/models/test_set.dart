@@ -25,6 +25,7 @@ class TestSet {
     required this.timeLimitMinutes,
     required this.year,
     required this.sortOrder,
+    this.openCount = 0,
   });
 
   final String id;
@@ -54,6 +55,11 @@ class TestSet {
 
   final int sortOrder;
 
+  /// How many times (all students combined) this test has been tapped —
+  /// shown on the test list so a popular set stands out. 0 until
+  /// migration_test_open_counts.sql has been run.
+  final int openCount;
+
   factory TestSet.fromMap(Map<String, dynamic> map) {
     final type = TestSetTypeX.fromValue(map['type'] as String?);
     final typesRaw = (map['types'] as List?)?.map((e) => e.toString()).toList();
@@ -72,6 +78,7 @@ class TestSet {
       timeLimitMinutes: (map['time_limit_minutes'] as num?)?.toInt(),
       year: (map['year'] as num?)?.toInt(),
       sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
+      openCount: (map['open_count'] as num?)?.toInt() ?? 0,
     );
   }
 }

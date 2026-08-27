@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../core/models/question.dart';
@@ -110,6 +112,20 @@ class MockTestRepository {
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
+  /// Fetches exactly these questions, in the same order as [ids] — for a
+  /// caller (Bullet Revision) that has already decided which specific
+  /// questions to run rather than deriving them from a subject/exam
+  /// filter here.
+  Future<List<Question>> fetchQuestionsByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final rows = await _client.from('questions').select().inFilter('id', ids);
+    final byId = {
+      for (final row in rows)
+        row['id'] as String: Question.fromMap(row['id'] as String, row),
+    };
+    return [for (final id in ids) if (byId[id] != null) byId[id]!];
+  }
+
   Future<Map<String, ReviewProgress>> fetchProgress(String uid) async {
     final rows = await _client
         .from('question_progress')
@@ -148,5 +164,33 @@ class MockTestRepository {
       'started_at': startedAt.toIso8601String(),
       'submitted_at': submittedAt.toIso8601String(),
     });
+  }
+
+  /// Open counts for every block already opened at least once under
+  /// [subject] — blocks that have never been opened simply have no row
+  /// (see migration_test_open_counts.sql), so a missing key here means 0.
+  Future<Map<int, int>> fetchSubjectBlockOpenCounts(String subject) async {
+    final rows = await _client
+        .from('subject_block_open_counts')
+        .select('block_index, open_count')
+        .eq('subject', subject);
+    return {
+      for (final row in rows)
+        (row['block_index'] as num).toInt(): (row['open_count'] as num).toInt(),
+    };
+  }
+
+  /// Fire-and-forget: bumps this block's open count by 1 — same
+  /// swallow-errors, never-await stance as ExamCatalogRepository's
+  /// recordExamOpened, so a missed count never blocks opening the block.
+  void recordSubjectBlockOpened(String subject, int blockIndex) {
+    unawaited(
+      _client
+          .rpc(
+            'increment_subject_block_open_count',
+            params: {'p_subject': subject, 'p_block_index': blockIndex},
+          )
+          .catchError((_) {}),
+    );
   }
 }

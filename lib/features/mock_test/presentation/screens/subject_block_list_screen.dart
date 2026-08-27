@@ -30,6 +30,7 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
   String? _errorMessage;
   int _totalQuestions = 0;
   int _chunkSize = 30;
+  Map<int, int> _openCounts = const {};
 
   @override
   void initState() {
@@ -43,10 +44,14 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
         widget.subject,
       );
       final pool = dedupeByText(subjectQuestions);
+      final openCounts = await _repository.fetchSubjectBlockOpenCounts(
+        widget.subject,
+      );
       if (!mounted) return;
       setState(() {
         _totalQuestions = pool.length;
         _chunkSize = chunkSizeForSubject(widget.subject);
+        _openCounts = openCounts;
         _loading = false;
       });
     } catch (e) {
@@ -124,16 +129,26 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                               color: style.color,
                             ),
                       ),
-                      subtitle: Text('${end - start} questions'),
+                      subtitle: Text(
+                        '${end - start} questions · Opened ${_openCounts[index] ?? 0}x',
+                      ),
                       trailing: isFree
                           ? const Icon(Icons.chevron_right)
                           : const Icon(Icons.lock_outline, size: 20),
-                      onTap: () => isFree
-                          ? context.push(destination)
-                          : AdService.showBeforeOpeningContent(
-                              () => context.push(destination),
-                              ignoreCooldown: true,
-                            ),
+                      onTap: () {
+                        _repository.recordSubjectBlockOpened(
+                          widget.subject,
+                          index,
+                        );
+                        if (isFree) {
+                          context.push(destination);
+                        } else {
+                          AdService.showBeforeOpeningContent(
+                            () => context.push(destination),
+                            ignoreCooldown: true,
+                          );
+                        }
+                      },
                     ),
                   );
                 },
