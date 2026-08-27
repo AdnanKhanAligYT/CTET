@@ -1,10 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/services/ad_service.dart';
-import '../../../../core/services/notification_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/timetable_repository.dart';
 import '../../domain/timetable_block.dart';
@@ -43,7 +40,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
       _blocks = blocks;
       _loading = false;
     });
-    unawaited(NotificationService.scheduleTimetableReminders(blocks));
   }
 
   Future<void> _toggleDone(TimetableBlock block) async {
