@@ -357,9 +357,55 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+              child: _ShortcutHint(
+                isMyShortcut: _isMyShortcut,
+                onTap: _togglingShortcut ? null : _toggleShortcut,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
               child: _SyllabusButton(onTap: _openSyllabus),
             ),
             Expanded(child: content),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable hint under the app bar spelling out what the star icon up
+/// there does — the icon alone only explains itself on a long-press
+/// tooltip, which most students never trigger.
+class _ShortcutHint extends StatelessWidget {
+  const _ShortcutHint({required this.isMyShortcut, required this.onTap});
+
+  final bool isMyShortcut;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(
+              isMyShortcut ? Icons.star : Icons.star_border,
+              size: 18,
+              color: AppColors.tileMockTest,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                isMyShortcut
+                    ? 'This is your shortcut — tap the star to remove it'
+                    : 'Tap the star to set this as your shortcut',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           ],
         ),
       ),
@@ -379,7 +425,7 @@ class _SyllabusButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         icon: const Icon(Icons.checklist_outlined),
-        label: const Text('Syllabus'),
+        label: const Text('View your Syllabus'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.tileSyllabus,
           side: BorderSide(color: AppColors.tileSyllabus),

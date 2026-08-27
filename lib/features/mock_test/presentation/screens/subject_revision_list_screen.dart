@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/models/question.dart';
 import '../../../../core/services/ad_service.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/mock_test_repository.dart';
-import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
 
 /// Behind the dashboard's "Subject Wise Revision" tile — the subject list
@@ -41,19 +39,17 @@ class _SubjectRevisionListScreenState
       _errorMessage = null;
     });
     try {
-      final questions = await _repository.fetchAllQuestions();
-      final bySubject = <String, List<Question>>{};
-      for (final question in questions) {
-        if (question.subject.isEmpty) continue;
-        bySubject.putIfAbsent(question.subject, () => []).add(question);
+      final rows = await _repository.fetchAllQuestionSubjectsAndText();
+      final bySubject = <String, Set<String>>{};
+      for (final row in rows) {
+        if (row.subject.isEmpty) continue;
+        // Deduped per subject (same rule TakeTestScreen applies when it
+        // actually builds the run) so the count shown here always matches
+        // how many unique questions the student will actually see.
+        bySubject.putIfAbsent(row.subject, () => <String>{}).add(row.text.trim());
       }
-      // Deduped per subject (same rule TakeTestScreen applies when it
-      // actually builds the run) so the count shown here always matches
-      // how many unique questions the student will actually see.
       final entries =
-          bySubject.entries
-              .map((e) => MapEntry(e.key, dedupeByText(e.value).length))
-              .toList()
+          bySubject.entries.map((e) => MapEntry(e.key, e.value.length)).toList()
             ..sort((a, b) => a.key.compareTo(b.key));
 
       if (!mounted) return;

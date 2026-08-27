@@ -47,6 +47,29 @@ class MockTestRepository {
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
+  /// Lightweight counterpart to [fetchAllQuestions] for screens that only
+  /// need per-subject counts (Subject Wise Revision's list) — selects just
+  /// `subject` and `text` instead of every column. `options`, `explanations`,
+  /// `table` and `image_urls` make up most of each row's bytes and were
+  /// being pulled over the wire (and JSON-decoded into full Question
+  /// objects) on every open of that screen just to be discarded a moment
+  /// later, which made it visibly slow to open once the question bank grew.
+  Future<List<({String subject, String text})>>
+  fetchAllQuestionSubjectsAndText() async {
+    final rows = await _fetchAllRows(
+      (from, to) =>
+          _client.from('questions').select('subject, text').range(from, to),
+    );
+    return rows
+        .map(
+          (row) => (
+            subject: row['subject'] as String? ?? '',
+            text: row['text'] as String? ?? '',
+          ),
+        )
+        .toList();
+  }
+
   /// Supabase's PostgREST caps every response at a fixed max-rows (1000 by
   /// default) no matter how many rows actually match — it silently returns
   /// a truncated page instead of erroring, and with no ORDER BY on these

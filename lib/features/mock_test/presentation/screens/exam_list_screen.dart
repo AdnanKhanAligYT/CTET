@@ -13,10 +13,15 @@ import '../../data/exam_catalog_repository.dart';
 
 /// First screen behind both the "Mock Test" and "Previous Year Questions"
 /// dashboard tiles — same screen, same data source, just a different
-/// [type] so the next screen (PaperListScreen -> TestSetListScreen) knows
-/// which list of test sets to eventually show. Scoped to the student's
-/// own exam selection (profile.exams) — someone preparing only for CTET
-/// Paper 1 shouldn't have to wade through every other state's TET here.
+/// [type] so the tree below knows which list of test sets to eventually
+/// show. Scoped to the student's own exam selection (profile.exams) —
+/// someone preparing only for CTET Paper 1 shouldn't have to wade through
+/// every other state's TET here.
+///
+/// Every level below the exam (paper, subject section, ...) expands
+/// in place as a dropdown under its row instead of pushing a new screen —
+/// only tapping an actual leaf (no further children) navigates away, into
+/// TestSetListScreen. See [_ExamNodeTile].
 class ExamListScreen extends ConsumerStatefulWidget {
   const ExamListScreen({super.key, required this.type});
 
@@ -100,34 +105,163 @@ class _ExamListScreenState extends ConsumerState<ExamListScreen> {
             : ListView.builder(
                 padding: const EdgeInsets.all(24),
                 itemCount: _exams.length,
-                itemBuilder: (context, index) {
-                  final exam = _exams[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: NetworkLogoAvatar(
-                        url: exam.logoUrl,
-                        fallbackIcon: Icons.school_outlined,
-                        fallbackColor: AppColors.tileMockTest,
-                      ),
-                      title: Text(
-                        exam.name,
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        _repository.recordExamOpened(exam.id);
-                        context.push(
-                          '/mock-test/papers?type=${widget.type.value}',
-                          extra: exam,
-                        );
-                      },
-                    ),
-                  );
-                },
+                itemBuilder: (context, index) => _ExamNodeTile(
+                  node: _exams[index],
+                  type: widget.type,
+                  repository: _repository,
+                  depth: 0,
+                ),
               ),
       ),
+    );
+  }
+}
+
+/// One row in the exam/paper/section tree. Tapping it asks "does this node
+/// have children?" — if yes, expands a dropdown of them right below (fetched
+/// once, then cached for the rest of this screen's life so re-collapsing
+/// and re-expanding is instant); if no, it's a leaf, so it navigates
+/// straight to that node's test-set list, same destination as before this
+/// screen stopped pushing a new page per level.
+///
+/// A long children list (e.g. a paper's subject sections) only shows the
+/// first [_collapsedLimit] up front, with a "View More" row to reveal the
+/// rest — the list this replaces (Science(Hin Eng), Social Science, ...)
+/// can otherwise be long enough to bury the folder someone actually wants.
+class _ExamNodeTile extends StatefulWidget {
+  const _ExamNodeTile({
+    required this.node,
+    required this.type,
+    required this.repository,
+    required this.depth,
+  });
+
+  final ExamNode node;
+  final TestSetType type;
+  final ExamCatalogRepository repository;
+  final int depth;
+
+  @override
+  State<_ExamNodeTile> createState() => _ExamNodeTileState();
+}
+
+class _ExamNodeTileState extends State<_ExamNodeTile> {
+  static const _collapsedLimit = 3;
+
+  bool _expanded = false;
+  bool _checkingChildren = false;
+  List<ExamNode>? _children;
+  bool _showAllChildren = false;
+
+  Future<void> _handleTap() async {
+    if (_checkingChildren) return;
+
+    // Already fetched once — just toggle the dropdown, no need to hit the
+    // network again.
+    if (_children != null) {
+      setState(() => _expanded = !_expanded);
+      return;
+    }
+
+    setState(() => _checkingChildren = true);
+    widget.repository.recordExamOpened(widget.node.id);
+    try {
+      final children = await widget.repository.fetchPapers(
+        widget.node.id,
+        widget.type,
+      );
+      if (!mounted) return;
+      if (children.isEmpty) {
+        // Leaf node — same destination as the old push-based flow.
+        setState(() => _checkingChildren = false);
+        context.push(
+          '/mock-test/sets?type=${widget.type.value}',
+          extra: widget.node,
+        );
+      } else {
+        setState(() {
+          _children = children;
+          _expanded = true;
+          _checkingChildren = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _checkingChildren = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final children = _children;
+    final visibleChildren = children == null
+        ? const <ExamNode>[]
+        : (_showAllChildren || children.length <= _collapsedLimit)
+        ? children
+        : children.sublist(0, _collapsedLimit);
+    final hasMore =
+        children != null &&
+        !_showAllChildren &&
+        children.length > _collapsedLimit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: NetworkLogoAvatar(
+              url: widget.node.logoUrl,
+              fallbackIcon: widget.depth == 0
+                  ? Icons.school_outlined
+                  : Icons.folder_outlined,
+              fallbackColor: AppColors.tileMockTest,
+            ),
+            title: Text(
+              widget.node.name,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            trailing: _checkingChildren
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+            enabled: !_checkingChildren,
+            onTap: _handleTap,
+          ),
+        ),
+        if (_expanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 20, bottom: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final child in visibleChildren)
+                  _ExamNodeTile(
+                    node: child,
+                    type: widget.type,
+                    repository: widget.repository,
+                    depth: widget.depth + 1,
+                  ),
+                if (hasMore)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _showAllChildren = true),
+                      child: const Text('View More'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
