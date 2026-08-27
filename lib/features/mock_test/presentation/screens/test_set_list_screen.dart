@@ -136,7 +136,10 @@ class _TestSetListScreenState extends State<TestSetListScreen> {
     if (isFree) {
       await _proceedOpen(uid, set);
     } else {
-      AdService.showBeforeOpeningContent(() => _proceedOpen(uid, set));
+      AdService.showBeforeOpeningContent(
+        () => _proceedOpen(uid, set),
+        ignoreCooldown: true,
+      );
     }
   }
 

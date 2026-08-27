@@ -103,6 +103,12 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                 itemBuilder: (context, index) {
                   final start = index * _chunkSize;
                   final end = (start + _chunkSize).clamp(0, _totalQuestions);
+                  // Only the topmost block is free — every other one shows
+                  // a full-screen interstitial ad first, same rule as the
+                  // Mock Test / PYQ test list (see [isFree] there).
+                  final isFree = index == 0;
+                  final destination =
+                      '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=$index';
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -119,12 +125,15 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                             ),
                       ),
                       subtitle: Text('${end - start} questions'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => AdService.showBeforeOpeningContent(
-                        () => context.push(
-                          '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=$index',
-                        ),
-                      ),
+                      trailing: isFree
+                          ? const Icon(Icons.chevron_right)
+                          : const Icon(Icons.lock_outline, size: 20),
+                      onTap: () => isFree
+                          ? context.push(destination)
+                          : AdService.showBeforeOpeningContent(
+                              () => context.push(destination),
+                              ignoreCooldown: true,
+                            ),
                     ),
                   );
                 },

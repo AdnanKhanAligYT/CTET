@@ -81,12 +81,21 @@ class AdService {
   /// Gate before opening locked/gated content (a non-free test, a
   /// revision block, the syllabus, ...): shows a preloaded interstitial
   /// and calls [onFinished] once it's dismissed. Same fail-open stance as
-  /// [showAfterMockTest] — no ad ready (no network, still loading, or the
-  /// cooldown hasn't elapsed) means [onFinished] fires immediately rather
-  /// than blocking the student from the content they tapped.
-  static void showBeforeOpeningContent(VoidCallback onFinished) {
+  /// [showAfterMockTest] — no ad ready (no network, still loading, or —
+  /// unless [ignoreCooldown] — the cooldown hasn't elapsed) means
+  /// [onFinished] fires immediately rather than blocking the student from
+  /// the content they tapped.
+  ///
+  /// [ignoreCooldown] is for a locked test/block someone deliberately
+  /// tapped past the free first one — that's a paywall moment, not
+  /// incidental browsing, so it always shows an ad if one's loaded,
+  /// regardless of how recently the last one ran.
+  static void showBeforeOpeningContent(
+    VoidCallback onFinished, {
+    bool ignoreCooldown = false,
+  }) {
     final ad = _interstitial;
-    if (ad == null || !_cooledDown) {
+    if (ad == null || (!ignoreCooldown && !_cooledDown)) {
       onFinished();
       return;
     }
