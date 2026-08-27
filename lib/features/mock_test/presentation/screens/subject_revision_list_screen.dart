@@ -9,9 +9,10 @@ import '../subject_style.dart';
 /// Behind the dashboard's "Subject Wise Revision" tile — the subject list
 /// isn't admin-managed, it's derived on the fly from whatever questions
 /// already exist, so it always matches the data that's actually been
-/// uploaded (see MockTestRepository.fetchAllQuestions for why this isn't
-/// scoped to the student's own exam selection). Tapping a subject jumps
-/// straight into TakeTestScreen for that subject.
+/// uploaded. Tapping a subject goes to SubjectBlockListScreen. No
+/// question count is shown anywhere in this flow (here or on a subject's
+/// block list) — the exact size of the question bank per subject
+/// shouldn't be something the app hands out.
 class SubjectRevisionListScreen extends StatefulWidget {
   const SubjectRevisionListScreen({super.key});
 
@@ -25,7 +26,7 @@ class _SubjectRevisionListScreenState
   final _repository = MockTestRepository();
   bool _loading = true;
   String? _errorMessage;
-  List<MapEntry<String, int>> _subjectCounts = const [];
+  List<String> _subjects = const [];
 
   @override
   void initState() {
@@ -39,22 +40,10 @@ class _SubjectRevisionListScreenState
       _errorMessage = null;
     });
     try {
-      final rows = await _repository.fetchAllQuestionSubjectsAndText();
-      final bySubject = <String, Set<String>>{};
-      for (final row in rows) {
-        if (row.subject.isEmpty) continue;
-        // Deduped per subject (same rule TakeTestScreen applies when it
-        // actually builds the run) so the count shown here always matches
-        // how many unique questions the student will actually see.
-        bySubject.putIfAbsent(row.subject, () => <String>{}).add(row.text.trim());
-      }
-      final entries =
-          bySubject.entries.map((e) => MapEntry(e.key, e.value.length)).toList()
-            ..sort((a, b) => a.key.compareTo(b.key));
-
+      final subjects = await _repository.fetchDistinctSubjects();
       if (!mounted) return;
       setState(() {
-        _subjectCounts = entries;
+        _subjects = subjects;
         _loading = false;
       });
     } catch (e) {
@@ -95,7 +84,7 @@ class _SubjectRevisionListScreenState
       bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: const Text('Subject Wise Revision')),
       body: SafeArea(
-        child: _subjectCounts.isEmpty
+        child: _subjects.isEmpty
             ? const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -107,10 +96,10 @@ class _SubjectRevisionListScreenState
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(24),
-                itemCount: _subjectCounts.length,
+                itemCount: _subjects.length,
                 itemBuilder: (context, index) {
-                  final entry = _subjectCounts[index];
-                  final style = subjectStyleFor(entry.key);
+                  final subject = _subjects[index];
+                  final style = subjectStyleFor(subject);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -119,17 +108,16 @@ class _SubjectRevisionListScreenState
                         child: Icon(style.icon, color: Colors.white),
                       ),
                       title: Text(
-                        entry.key,
+                        subject,
                         style: Theme.of(context).textTheme.titleLarge
                             ?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: style.color,
                             ),
                       ),
-                      subtitle: Text('${entry.value} questions'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(
-                        '/mock-test/subjects/blocks?subject=${Uri.encodeComponent(entry.key)}',
+                        '/mock-test/subjects/blocks?subject=${Uri.encodeComponent(subject)}',
                       ),
                     ),
                   );

@@ -128,30 +128,30 @@ class _TakeTestScreenState extends ConsumerState<TakeTestScreen> {
       return;
     }
 
-    // Subject Wise Revision: every uploaded question with this subject,
-    // not scoped to the student's exam selection — see
-    // MockTestRepository.fetchAllQuestions for why.
-    final subjectAllQuestions = await _repository.fetchQuestionsForSubject(
-      subject,
-    );
-    final progress = await _repository.fetchProgress(user.id);
-    var subjectQuestions = dedupeByText(subjectAllQuestions);
-
     final block = widget.block;
+    List<Question> subjectQuestions;
     if (block != null) {
-      // Block membership must stay stable across visits — "CDP 1st"
-      // always means the same ~30 questions — so slice by a fixed key
-      // (id) rather than anything that could shift between loads.
-      subjectQuestions.sort((a, b) => a.id.compareTo(b.id));
-      final chunkSize = chunkSizeForSubject(subject);
-      final start = block * chunkSize;
-      subjectQuestions = start < subjectQuestions.length
-          ? subjectQuestions.sublist(
-              start,
-              (start + chunkSize).clamp(0, subjectQuestions.length),
-            )
-          : [];
+      // Subject Wise Revision, a specific block: the block's question ids
+      // are already frozen server-side (migration_subject_blocks.sql), so
+      // this is one lookup for ~30-60 ids plus one fetch of exactly those
+      // — not the whole subject's pool — which is what makes starting the
+      // test near-instant.
+      final ids = await _repository.fetchSubjectBlockQuestionIds(
+        subject,
+        block,
+      );
+      subjectQuestions = ids == null
+          ? const []
+          : await _repository.fetchQuestionsByIds(ids);
+    } else {
+      // No block given — every uploaded question with this subject, not
+      // scoped to the student's exam selection — see
+      // MockTestRepository.fetchAllQuestions for why.
+      subjectQuestions = dedupeByText(
+        await _repository.fetchQuestionsForSubject(subject),
+      );
     }
+    final progress = await _repository.fetchProgress(user.id);
 
     // Card-stack behaviour, within whichever pool this ended up being
     // (the whole subject, or just the selected block): never-attempted

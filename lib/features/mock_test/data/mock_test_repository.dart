@@ -49,27 +49,64 @@ class MockTestRepository {
     return rows.map((row) => Question.fromMap(row['id'] as String, row)).toList();
   }
 
-  /// Lightweight counterpart to [fetchAllQuestions] for screens that only
-  /// need per-subject counts (Subject Wise Revision's list) — selects just
-  /// `subject` and `text` instead of every column. `options`, `explanations`,
-  /// `table` and `image_urls` make up most of each row's bytes and were
-  /// being pulled over the wire (and JSON-decoded into full Question
-  /// objects) on every open of that screen just to be discarded a moment
-  /// later, which made it visibly slow to open once the question bank grew.
-  Future<List<({String subject, String text})>>
-  fetchAllQuestionSubjectsAndText() async {
+  /// Every distinct subject with at least one uploaded question — backs
+  /// Subject Wise Revision's subject list. No longer shows a question
+  /// count next to each one (see [fetchSubjectBlocks] for why: exact
+  /// question-bank sizes shouldn't be inferable from the app), so this
+  /// only needs the `subject` column, not every row's full content.
+  Future<List<String>> fetchDistinctSubjects() async {
     final rows = await _fetchAllRows(
-      (from, to) =>
-          _client.from('questions').select('subject, text').range(from, to),
+      (from, to) => _client.from('questions').select('subject').range(from, to),
     );
-    return rows
-        .map(
-          (row) => (
-            subject: row['subject'] as String? ?? '',
-            text: row['text'] as String? ?? '',
-          ),
-        )
-        .toList();
+    final subjects = <String>{
+      for (final row in rows)
+        if ((row['subject'] as String?)?.isNotEmpty ?? false)
+          row['subject'] as String,
+    };
+    return subjects.toList()..sort();
+  }
+
+  /// Every pre-computed block for [subject], in order — see
+  /// migration_subject_blocks.sql. A block is a frozen, complete
+  /// chunk-of-N set of question ids (30, or 60 for SST); it only exists
+  /// once enough questions have been uploaded to fill it, so there's
+  /// never a trailing partial block. Replaces what used to be a client-side
+  /// fetch-everything-then-slice on every open of this list.
+  Future<List<({int blockIndex, List<String> questionIds})>>
+  fetchSubjectBlocks(String subject) async {
+    final rows = await _client
+        .from('subject_blocks')
+        .select('block_index, question_ids')
+        .eq('subject', subject)
+        .order('block_index');
+    return [
+      for (final row in rows)
+        (
+          blockIndex: (row['block_index'] as num).toInt(),
+          questionIds: (row['question_ids'] as List)
+              .map((e) => e.toString())
+              .toList(),
+        ),
+    ];
+  }
+
+  /// The exact question ids frozen into one block — null if that block
+  /// doesn't exist (not enough questions uploaded yet, or a stale link).
+  /// Backs TakeTestScreen's subject+block run: fetching just these ~30-60
+  /// ids (via [fetchQuestionsByIds]) instead of the whole subject's pool
+  /// is what makes starting the test near-instant.
+  Future<List<String>?> fetchSubjectBlockQuestionIds(
+    String subject,
+    int blockIndex,
+  ) async {
+    final row = await _client
+        .from('subject_blocks')
+        .select('question_ids')
+        .eq('subject', subject)
+        .eq('block_index', blockIndex)
+        .maybeSingle();
+    if (row == null) return null;
+    return (row['question_ids'] as List).map((e) => e.toString()).toList();
   }
 
   /// Supabase's PostgREST caps every response at a fixed max-rows (1000 by

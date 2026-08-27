@@ -3,17 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/ad_service.dart';
 import '../../data/mock_test_repository.dart';
-import '../../data/question_dedupe.dart';
 import '../subject_style.dart';
 
-/// Behind a Subject Wise Revision subject tap — splits that subject's
-/// question pool into fixed chunk-of-N blocks (30 per block, 60 for SST
-/// — the same chunkSizeForSubject used for the exam-wise Mock Test/PYQ
-/// checkpoints) so a student picks "CDP 1st", "CDP 2nd", etc. rather than
-/// always starting the whole subject in one sitting. Block membership is
-/// stable (sorted by question id in TakeTestScreen) — "CDP 1st" always
-/// means the same ~30 questions; only the order *within* a block once
-/// the test starts follows the card-stack recency sort.
+/// Behind a Subject Wise Revision subject tap — lists that subject's
+/// pre-computed blocks (see migration_subject_blocks.sql): "CDP 1st",
+/// "CDP 2nd", etc., each a frozen, complete chunk of 30 questions (60 for
+/// SST). A block only exists once enough questions have been uploaded to
+/// fill it — there's never a trailing partial one — and its membership
+/// never changes once created, so "CDP 1st" always means the same
+/// questions. This list is just one cheap query now instead of fetching
+/// every question in the subject to compute where the boundaries fall.
 class SubjectBlockListScreen extends StatefulWidget {
   const SubjectBlockListScreen({super.key, required this.subject});
 
@@ -28,8 +27,7 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
   final _repository = MockTestRepository();
   bool _loading = true;
   String? _errorMessage;
-  int _totalQuestions = 0;
-  int _chunkSize = 30;
+  List<({int blockIndex, List<String> questionIds})> _blocks = const [];
   Map<int, int> _openCounts = const {};
 
   @override
@@ -40,17 +38,13 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
 
   Future<void> _load() async {
     try {
-      final subjectQuestions = await _repository.fetchQuestionsForSubject(
-        widget.subject,
-      );
-      final pool = dedupeByText(subjectQuestions);
+      final blocks = await _repository.fetchSubjectBlocks(widget.subject);
       final openCounts = await _repository.fetchSubjectBlockOpenCounts(
         widget.subject,
       );
       if (!mounted) return;
       setState(() {
-        _totalQuestions = pool.length;
-        _chunkSize = chunkSizeForSubject(widget.subject);
+        _blocks = blocks;
         _openCounts = openCounts;
         _loading = false;
       });
@@ -86,34 +80,31 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
       );
     }
 
-    final blockCount = (_totalQuestions / _chunkSize).ceil();
-
     return Scaffold(
       bottomNavigationBar: const AppBannerAd(),
       appBar: AppBar(title: Text(widget.subject)),
       body: SafeArea(
-        child: blockCount == 0
+        child: _blocks.isEmpty
             ? const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
-                    'Abhi is subject ke questions upload nahi hue.',
+                    'Abhi is subject ka pehla poora block ban nahi paya — thode aur questions upload hone chahiye.',
                     textAlign: TextAlign.center,
                   ),
                 ),
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(24),
-                itemCount: blockCount,
+                itemCount: _blocks.length,
                 itemBuilder: (context, index) {
-                  final start = index * _chunkSize;
-                  final end = (start + _chunkSize).clamp(0, _totalQuestions);
+                  final block = _blocks[index];
                   // Only the topmost block is free — every other one shows
                   // a full-screen interstitial ad first, same rule as the
                   // Mock Test / PYQ test list (see [isFree] there).
                   final isFree = index == 0;
                   final destination =
-                      '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=$index';
+                      '/mock-test/take?subject=${Uri.encodeComponent(widget.subject)}&block=${block.blockIndex}';
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
@@ -130,7 +121,7 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                             ),
                       ),
                       subtitle: Text(
-                        '${end - start} questions · Opened ${_openCounts[index] ?? 0}x',
+                        'Opened ${_openCounts[block.blockIndex] ?? 0}x',
                       ),
                       trailing: isFree
                           ? const Icon(Icons.chevron_right)
@@ -138,7 +129,7 @@ class _SubjectBlockListScreenState extends State<SubjectBlockListScreen> {
                       onTap: () {
                         _repository.recordSubjectBlockOpened(
                           widget.subject,
-                          index,
+                          block.blockIndex,
                         );
                         if (isFree) {
                           context.push(destination);
